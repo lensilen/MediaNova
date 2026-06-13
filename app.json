@@ -1,15 +1,12 @@
 {
   "expo": {
     "name": "MediaNova",
-    "slug": "MediaNova",
+    "slug": "medianova",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "medianova",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -18,10 +15,6 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -34,11 +27,9 @@
             "imageWidth": 76
           }
         }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      ],
+      "expo-video",
+      "expo-audio"
+    ]
   }
 }

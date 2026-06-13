@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# editor
+.vscode/
+
 # Native
 .kotlin/
 *.orig.*
@@ -31,7 +34,12 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+google-services.json
+GoogleService-Info.plist
+google-api-key.*
+secrets.json
 
 # typescript
 *.tsbuildinfo
