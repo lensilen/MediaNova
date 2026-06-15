@@ -1,3 +1,132 @@
+import { useCallback, useEffect } from "react";
+
+import { useAuthStore } from "../store/authStore";
+import {
+  loginWithEmail,
+  loginWithGoogle,
+  logout,
+  onAuthStateChanged,
+  registerWithEmail,
+} from "../utils/auth";
+
+let authSubscription = null;
+let authHookUsers = 0;
+
+function startAuthSubscription() {
+  if (authSubscription) {
+    return;
+  }
+
+  const store = useAuthStore.getState();
+  store.setLoading(true);
+
+  authSubscription = onAuthStateChanged(
+    (user) => {
+      const latestStore = useAuthStore.getState();
+      latestStore.setUser(user);
+      latestStore.setLoading(false);
+
+      if (!user) {
+        latestStore.setProfile(null);
+      }
+    },
+    () => {
+      const latestStore = useAuthStore.getState();
+      latestStore.setError("Gagal membaca status login. Coba buka ulang app.");
+      latestStore.setLoading(false);
+    },
+  );
+}
+
+function stopAuthSubscription() {
+  if (!authSubscription || authHookUsers > 0) {
+    return;
+  }
+
+  authSubscription();
+  authSubscription = null;
+}
+
+async function runAuthAction(action) {
+  const store = useAuthStore.getState();
+  store.setLoading(true);
+  store.clearError();
+
+  const result = await action();
+
+  if (result.success) {
+    store.setUser(result.user || null);
+    store.setProfile(result.profile || null);
+  } else {
+    store.setError(result.error);
+  }
+
+  store.setLoading(false);
+  return result;
+}
+
 export function useAuth() {
-  return {};
+  const {
+    user,
+    profile,
+    isAuthenticated,
+    isLoading,
+    error,
+    clearError,
+    setProfile,
+  } = useAuthStore();
+
+  useEffect(() => {
+    authHookUsers += 1;
+    startAuthSubscription();
+
+    return () => {
+      authHookUsers -= 1;
+      stopAuthSubscription();
+    };
+  }, []);
+
+  const register = useCallback(
+    (email, password, displayName) =>
+      runAuthAction(() => registerWithEmail(email, password, displayName)),
+    [],
+  );
+
+  const login = useCallback(
+    (email, password) => runAuthAction(() => loginWithEmail(email, password)),
+    [],
+  );
+
+  const loginGoogle = useCallback(
+    (idToken) => runAuthAction(() => loginWithGoogle(idToken)),
+    [],
+  );
+
+  const signOut = useCallback(
+    () =>
+      runAuthAction(async () => {
+        const result = await logout();
+
+        if (result.success) {
+          useAuthStore.getState().clearAuth();
+        }
+
+        return result;
+      }),
+    [],
+  );
+
+  return {
+    user,
+    profile,
+    isAuthenticated,
+    isLoading,
+    error,
+    clearError,
+    setProfile,
+    register,
+    login,
+    loginGoogle,
+    signOut,
+  };
 }
