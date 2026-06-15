@@ -1,108 +1,17 @@
-import { useEffect, useState } from 'react';
+import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
+  View,
   Text,
   TextInput,
-  View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-
-import { colors } from '../../constants/theme';
-import { useAuth } from '../../hooks/useAuth';
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 
 export function LoginScreen() {
-  const router = useRouter();
-  const { clearError, error, isAuthenticated, isLoading, login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [formError, setFormError] = useState('');
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/');
-    }
-  }, [isAuthenticated, router]);
-
-  function resetErrors() {
-    setFormError('');
-    clearError();
-  }
-
-  async function handleLogin() {
-    resetErrors();
-
-    if (!email.trim() || !password) {
-      setFormError('Email dan password wajib diisi.');
-      return;
-    }
-
-    const result = await login(email, password);
-
-    if (result.success) {
-      router.replace('/');
-    }
-  }
-
-  const message = formError || error;
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.brand}>MediaNova</Text>
-        <Text style={styles.title}>Masuk ke akun</Text>
-        <Text style={styles.subtitle}>
-          Gunakan akun yang sudah terdaftar untuk membuka feed.
-        </Text>
-
-        <View style={styles.form}>
-          <TextInput
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="Email"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={email}
-          />
-          <TextInput
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor={colors.muted}
-            secureTextEntry
-            style={styles.input}
-            value={password}
-          />
-
-          {message ? <Text style={styles.error}>{message}</Text> : null}
-
-          <Pressable
-            disabled={isLoading}
-            onPress={handleLogin}
-            style={[styles.button, isLoading && styles.buttonDisabled]}>
-            {isLoading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <Text style={styles.buttonText}>Masuk</Text>
-            )}
-          </Pressable>
-
-          <Pressable disabled style={[styles.googleButton, styles.buttonDisabled]}>
-            <Text style={styles.googleButtonText}>Masuk dengan Google</Text>
-          </Pressable>
-        </View>
-
-        <Pressable onPress={() => router.push('/auth/register')}>
-          <Text style={styles.link}>Belum punya akun? Daftar</Text>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+    <View>
+      <Text>LoginScreen</Text>
+    </View>
   );
 }
 
@@ -185,5 +94,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 15,
     fontWeight: '700',
+  },
+});
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 40,
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 8,
+  },
+  button: {
+    backgroundColor: "#007AFF",
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  buttonText: {
+    color: "white",
+    textAlign: "center",
   },
 });
