@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -8,29 +8,29 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+} from "react-native";
+import { useRouter } from "expo-router";
 
-import { colors } from '../../constants/theme';
-import { useAuth } from '../../hooks/useAuth';
+import { colors } from "../../constants/theme";
+import { useAuth } from "../../hooks/useAuth";
 
-export function RegisterScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const { clearError, error, isAuthenticated, isLoading, register } = useAuth();
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [formError, setFormError] = useState('');
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/');
+      router.replace("/");
     }
   }, [isAuthenticated, router]);
 
   function resetErrors() {
-    setFormError('');
+    setFormError("");
     clearError();
   }
 
@@ -38,19 +38,19 @@ export function RegisterScreen() {
     resetErrors();
 
     if (!displayName.trim() || !email.trim() || !password) {
-      setFormError('Nama, email, dan password wajib diisi.');
+      setFormError("Nama, email, dan password wajib diisi.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setFormError('Konfirmasi password tidak sama.');
+      setFormError("Konfirmasi password tidak sama.");
       return;
     }
 
     const result = await register(email, password, displayName);
 
     if (result.success) {
-      router.replace('/');
+      router.replace("/");
     }
   }
 
@@ -58,8 +58,9 @@ export function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}>
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}
+    >
       <View style={styles.card}>
         <Text style={styles.brand}>MediaNova</Text>
         <Text style={styles.title}>Buat akun</Text>
@@ -108,7 +109,8 @@ export function RegisterScreen() {
           <Pressable
             disabled={isLoading}
             onPress={handleRegister}
-            style={[styles.button, isLoading && styles.buttonDisabled]}>
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+          >
             {isLoading ? (
               <ActivityIndicator color={colors.text} />
             ) : (
@@ -117,7 +119,7 @@ export function RegisterScreen() {
           </Pressable>
         </View>
 
-        <Pressable onPress={() => router.push('/auth/login')}>
+        <Pressable onPress={() => router.push("/auth/login")}>
           <Text style={styles.link}>Sudah punya akun? Masuk</Text>
         </Pressable>
       </View>
@@ -128,7 +130,7 @@ export function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
     backgroundColor: colors.background,
   },
@@ -138,12 +140,12 @@ const styles = StyleSheet.create({
   brand: {
     color: colors.primary,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   title: {
     color: colors.text,
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   subtitle: {
     color: colors.muted,
@@ -165,13 +167,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   error: {
-    color: '#FCA5A5',
+    color: "#FCA5A5",
     fontSize: 14,
     lineHeight: 20,
   },
   button: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 52,
     borderRadius: 8,
     backgroundColor: colors.primary,
@@ -182,13 +184,13 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   link: {
     color: colors.secondary,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

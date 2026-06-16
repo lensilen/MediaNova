@@ -1,5 +1,3 @@
-import { Redirect } from 'expo-router';
+import { FeedScreen } from "../../screens/home/FeedScreen";
 
-export default function Index() {
-  return <Redirect href="/auth/login" />;
-}
+export default FeedScreen;

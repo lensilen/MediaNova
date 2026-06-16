@@ -1,6 +1,5 @@
 import { create } from "zustand";
 
-<<<<<<< HEAD
 export const useAuthStore = create((set) => ({
   user: null,
   profile: null,
@@ -27,14 +26,3 @@ export const useAuthStore = create((set) => ({
 }));
 
 export const authStore = useAuthStore;
-=======
-const useAuthStore = create((set) => ({
-  user: null,
-
-  setUser: (user) => set({ user }),
-
-  logout: () => set({ user: null }),
-}));
-
-export default useAuthStore;
->>>>>>> 3ccd9b1 (feat: menambahkan halaman login)

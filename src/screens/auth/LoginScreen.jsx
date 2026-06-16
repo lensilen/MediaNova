@@ -1,24 +1,109 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  View,
 } from "react-native";
+import { useRouter } from "expo-router";
 
-export function LoginScreen() {
+import { colors } from "../../constants/theme";
+import { useAuth } from "../../hooks/useAuth";
+
+export default function LoginScreen() {
+  const router = useRouter();
+  const { clearError, error, isAuthenticated, isLoading, login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, router]);
+
+  function resetErrors() {
+    setFormError("");
+    clearError();
+  }
+
+  async function handleLogin() {
+    resetErrors();
+
+    if (!email.trim() || !password) {
+      setFormError("Email dan password wajib diisi.");
+      return;
+    }
+
+    await login(email, password);
+  }
+
+  const message = formError || error;
+
   return (
-    <View>
-      <Text>LoginScreen</Text>
-    </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}
+    >
+      <View style={styles.card}>
+        <Text style={styles.brand}>MediaNova</Text>
+        <Text style={styles.title}>Masuk</Text>
+        <Text style={styles.subtitle}>
+          Masuk untuk mengelola konten dan melihat feed.
+        </Text>
+
+        <View style={styles.form}>
+          <TextInput
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            value={email}
+          />
+          <TextInput
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor={colors.muted}
+            secureTextEntry
+            style={styles.input}
+            value={password}
+          />
+
+          {message ? <Text style={styles.error}>{message}</Text> : null}
+
+          <Pressable
+            disabled={isLoading}
+            onPress={handleLogin}
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={styles.buttonText}>Masuk</Text>
+            )}
+          </Pressable>
+        </View>
+
+        <Pressable onPress={() => router.push("/auth/register")}>
+          <Text style={styles.link}>Belum punya akun? Daftar</Text>
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
     backgroundColor: colors.background,
   },
@@ -28,12 +113,12 @@ const styles = StyleSheet.create({
   brand: {
     color: colors.primary,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   title: {
     color: colors.text,
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   subtitle: {
     color: colors.muted,
@@ -55,13 +140,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   error: {
-    color: '#FCA5A5',
+    color: "#FCA5A5",
     fontSize: 14,
     lineHeight: 20,
   },
   button: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 52,
     borderRadius: 8,
     backgroundColor: colors.primary,
@@ -72,57 +157,13 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: '700',
-  },
-  googleButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-  },
-  googleButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   link: {
     color: colors.secondary,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 15,
-    fontWeight: '700',
-  },
-});
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 40,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 8,
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  buttonText: {
-    color: "white",
-    textAlign: "center",
+    fontWeight: "700",
   },
 });
