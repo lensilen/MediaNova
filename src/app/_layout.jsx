@@ -5,12 +5,14 @@ import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '../constants/theme';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const firstSegment = segments[0];
   const { isAuthenticated, isLoading } = useAuth();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     if (isLoading) {
@@ -31,7 +33,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth/login" />

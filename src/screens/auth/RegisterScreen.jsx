@@ -112,7 +112,7 @@ export default function RegisterScreen() {
             style={[styles.button, isLoading && styles.buttonDisabled]}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.buttonText}>Daftar</Text>
             )}
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: "700",
   },

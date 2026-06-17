@@ -99,7 +99,7 @@ export function SearchScreen() {
           onPress={handleSearch}
           style={[styles.button, isSearching && styles.buttonDisabled]}>
           {isSearching ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>Cari</Text>
           )}
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontSize: 15,
     fontWeight: '800',
   },
