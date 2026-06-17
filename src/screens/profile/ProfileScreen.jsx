@@ -12,13 +12,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { ConnectionSheet } from '../../components/profile/ConnectionSheet';
 import { PostGrid } from '../../components/profile/PostGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { getUserPosts } from '../../utils/posts';
-import { getUserProfile } from '../../utils/profile';
+import { getFollowers, getFollowing, getUserProfile } from '../../utils/profile';
 import { followUser, isFollowing, unfollowUser } from '../../utils/social';
 import { profileStyles as styles } from './profileScreenStyles';
+
+const CONTENT_TABS = ['Video', 'Audio', 'Comment', 'Like', 'Saved'];
 
 function asParamValue(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -38,6 +41,13 @@ export function ProfileScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFollowed, setIsFollowed] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('Video');
+  const [connectionSheet, setConnectionSheet] = useState({
+    isLoading: false,
+    title: '',
+    users: [],
+    visible: false,
+  });
   const [error, setError] = useState('');
 
   const visibleProfile = useMemo(() => {
@@ -47,6 +57,29 @@ export function ProfileScreen() {
 
     return profile || {};
   }, [isOwnProfile, ownProfile, profile]);
+  const displayName = visibleProfile.displayName || user?.displayName || 'User';
+  const photoURL = visibleProfile.photoURL || user?.photoURL || '';
+  const bio = visibleProfile.bio || 'Digital creator di MediaNova.';
+  const location = visibleProfile.location || 'MediaNova Studio';
+  const handle = useMemo(() => {
+    const source = visibleProfile.email || displayName;
+    return `@${source.split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '')}`;
+  }, [displayName, visibleProfile.email]);
+  const visiblePosts = useMemo(() => {
+    if (activeTab === 'Video') {
+      return posts.filter((post) => post.type === 'video');
+    }
+
+    if (activeTab === 'Audio') {
+      return posts.filter((post) => post.type === 'audio');
+    }
+
+    if (activeTab === 'Saved') {
+      return posts;
+    }
+
+    return posts.filter((post) => post.type === 'photo');
+  }, [activeTab, posts]);
 
   const loadProfile = useCallback(
     async ({ refresh = false } = {}) => {
@@ -123,17 +156,37 @@ export function ProfileScreen() {
     loadProfile({ refresh: true });
   }
 
+  async function handleConnectionPress(type) {
+    if (!targetUserId) {
+      return;
+    }
+
+    const title = type === 'followers' ? 'Followers' : 'Following';
+    setConnectionSheet({ isLoading: true, title, users: [], visible: true });
+
+    const result =
+      type === 'followers'
+        ? await getFollowers(targetUserId)
+        : await getFollowing(targetUserId);
+
+    setConnectionSheet({
+      isLoading: false,
+      title,
+      users: result.success ? result[type] : [],
+      visible: true,
+    });
+
+    if (!result.success) {
+      Alert.alert(`${title} gagal dibuka`, result.error || 'Coba lagi.');
+    }
+  }
+
   function handlePostPress(post) {
     Alert.alert(
       post.type === 'audio' ? 'Audio post' : 'Media post',
       post.caption || 'Post ini belum punya caption.',
     );
   }
-
-  const displayName = visibleProfile.displayName || user?.displayName || 'User';
-  const email = visibleProfile.email || user?.email || '';
-  const photoURL = visibleProfile.photoURL || user?.photoURL || '';
-  const bio = visibleProfile.bio || 'Digital creator di MediaNova.';
 
   if (isLoading) {
     return (
@@ -176,68 +229,107 @@ export function ProfileScreen() {
         )}
 
         <Text style={[styles.name, { color: colors.text }]}>{displayName}</Text>
-        {email ? <Text style={[styles.email, { color: colors.muted }]}>{email}</Text> : null}
+        <Text style={[styles.email, { color: colors.muted }]}>{handle}</Text>
         <Text style={[styles.bio, { color: colors.text }]}>{bio}</Text>
+        <Text style={[styles.location, { color: colors.muted }]}>Pin {location}</Text>
       </View>
 
-      <View style={[styles.stats, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+      <View style={[styles.stats, { borderColor: colors.border }]}>
         <StatItem colors={colors} label="Post" value={posts.length} />
-        <StatItem colors={colors} label="Followers" value={visibleProfile.followers ?? 0} />
-        <StatItem colors={colors} label="Following" value={visibleProfile.following ?? 0} />
+        <StatItem
+          colors={colors}
+          label="Followers"
+          onPress={() => handleConnectionPress('followers')}
+          value={visibleProfile.followers ?? 0}
+        />
+        <StatItem
+          colors={colors}
+          label="Following"
+          onPress={() => handleConnectionPress('following')}
+          value={visibleProfile.following ?? 0}
+        />
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {isOwnProfile ? (
-        <Pressable
-          onPress={() => router.push('/settings')}
-          style={[styles.primaryButton, { backgroundColor: colors.primary }]}>
-          <Text style={styles.primaryButtonText}>Edit Profile</Text>
-        </Pressable>
-      ) : (
+      {!isOwnProfile ? (
         <Pressable
           disabled={isFollowLoading}
           onPress={handleFollowToggle}
           style={[
             styles.primaryButton,
             {
-              backgroundColor: isFollowed ? colors.surface : colors.primary,
+              backgroundColor: isFollowed ? colors.surface : colors.text,
               borderColor: colors.border,
               borderWidth: isFollowed ? 1 : 0,
             },
           ]}>
           {isFollowLoading ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color={isFollowed ? colors.text : colors.surface} />
           ) : (
-            <Text style={[styles.primaryButtonText, { color: colors.text }]}>
+            <Text
+              style={[
+                styles.primaryButtonText,
+                { color: isFollowed ? colors.text : colors.surface },
+              ]}>
               {isFollowed ? 'Following' : 'Follow'}
             </Text>
           )}
         </Pressable>
-      )}
+      ) : null}
 
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Posts</Text>
-        <Text style={[styles.sectionMeta, { color: colors.muted }]}>
-          Foto, video, dan audio
-        </Text>
+      <View style={[styles.tabBar, { borderColor: colors.border }]}>
+        {CONTENT_TABS.map((tab) => {
+          const isActive = activeTab === tab;
+
+          return (
+            <Pressable key={tab} onPress={() => setActiveTab(tab)} style={styles.tabItem}>
+              <Text style={[styles.tabText, { color: isActive ? colors.text : colors.muted }]}>
+                {tab}
+              </Text>
+              {isActive ? <View style={[styles.tabLine, { backgroundColor: colors.text }]} /> : null}
+            </Pressable>
+          );
+        })}
       </View>
 
       <PostGrid
         colors={colors}
         isLoading={isRefreshing}
         onPostPress={handlePostPress}
-        posts={posts}
+        posts={visiblePosts}
+      />
+
+      <ConnectionSheet
+        colors={colors}
+        isLoading={connectionSheet.isLoading}
+        onClose={() => setConnectionSheet((state) => ({ ...state, visible: false }))}
+        onUserPress={(item) => {
+          setConnectionSheet((state) => ({ ...state, visible: false }));
+          router.push({ pathname: '/(tabs)/profile', params: { userId: item.id } });
+        }}
+        title={connectionSheet.title}
+        users={connectionSheet.users}
+        visible={connectionSheet.visible}
       />
     </ScrollView>
   );
 }
 
-function StatItem({ colors, label, value }) {
+function formatCount(value) {
+  const count = Number(value || 0);
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+  return String(count);
+}
+
+function StatItem({ colors, label, onPress, value }) {
+  const Wrapper = onPress ? Pressable : View;
+
   return (
-    <View style={styles.statItem}>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+    <Wrapper onPress={onPress} style={styles.statItem}>
       <Text style={[styles.statLabel, { color: colors.muted }]}>{label}</Text>
-    </View>
+      <Text style={[styles.statValue, { color: colors.text }]}>{formatCount(value)}</Text>
+    </Wrapper>
   );
 }
