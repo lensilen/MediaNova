@@ -6,11 +6,73 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { router } from "expo-router";
+import { useAuth } from "../../hooks/useAuth";
 
-export function LoginScreen() {
+export default function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { login } = useAuth();
+  const handleGoogleLogin = async () => {
+    console.log("Google login clicked");
+    router.replace("/(tabs)"); 
+  };
+
+  const handleLogin = async () => {
+  const result = await login(email, password);
+
+  if (result.success) {
+    router.replace("/(tabs)");
+  } else {
+    alert(result.error);
+  }
+};
+
   return (
-    <View>
-      <Text>LoginScreen</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>MediaNova</Text>
+
+      <TextInput
+        placeholder="Email"
+        placeholderTextColor="#BBAFC8"
+        value={email}
+        onChangeText={setEmail}
+        style={styles.input}
+      />
+
+      <TextInput
+          placeholder="Password"
+          placeholderTextColor="#BBAFC8"
+          secureTextEntry
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          selectionColor="#A855F7"
+      />
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+      >
+        <Text style={styles.buttonText}>Login</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+      style={styles.googleButton}
+      onPress={handleGoogleLogin}
+      >
+      <Text style={styles.googleButtonText}>
+        Login dengan Google
+      </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => router.push("/auth/register")}
+      >
+        <Text style={styles.link}>
+          Belum punya akun? Register
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -18,111 +80,66 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: colors.background,
-  },
-  card: {
-    gap: 14,
-  },
-  brand: {
-    color: colors.primary,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  title: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '800',
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 10,
-  },
-  form: {
-    gap: 12,
-  },
-  input: {
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 16,
-    fontSize: 16,
-  },
-  error: {
-    color: '#FCA5A5',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  button: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  googleButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-  },
-  googleButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  link: {
-    color: colors.secondary,
-    marginTop: 8,
-    textAlign: 'center',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
     justifyContent: "center",
-    padding: 20,
+    padding: 24,
+    backgroundColor: "#0F0A14",
   },
+
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
+    fontSize: 32,
+    fontWeight: "800",
+    textAlign: "center",
     marginBottom: 40,
-    textAlign: "center",
+    color: "#FFFFFF",
   },
+
   input: {
+    minHeight: 54,
     borderWidth: 1,
+    borderColor: "#342242",
+    borderRadius: 12,
+    backgroundColor: "#1B1224",
+    color: "#FFFFFF",
+    paddingHorizontal: 16,
     marginBottom: 12,
-    padding: 12,
-    borderRadius: 8,
   },
+
   button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
+    minHeight: 54,
+    backgroundColor: "#A855F7",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
   },
+
   buttonText: {
-    color: "white",
+    color: "#FFFFFF",
     textAlign: "center",
+    fontWeight: "700",
+    fontSize: 16,
   },
+
+  link: {
+    textAlign: "center",
+    color: "#EC4899",
+    fontWeight: "700",
+  },
+
+  googleButton: {
+  minHeight: 54,
+  borderWidth: 1,
+  borderColor: "#342242",
+  borderRadius: 12,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "#FFFFFF",
+  marginBottom: 15,
+},
+
+googleButtonText: {
+  color: "#000000",
+  fontWeight: "700",
+},
+  
 });

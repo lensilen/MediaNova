@@ -13,21 +13,21 @@ export default function RootLayout() {
   const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    if (isLoading) {
-      return;
-    }
+  if (isLoading) {
+    return;
+  }
 
-    const isAuthRoute = firstSegment === 'auth';
+  const isAuthRoute = firstSegment === "auth";
 
-    if (!isAuthenticated && !isAuthRoute) {
-      router.replace('/auth/login');
-      return;
-    }
+  if (!isAuthenticated && !isAuthRoute) {
+    router.replace("/auth/login");
+    return;
+  }
 
-    if (isAuthenticated && isAuthRoute) {
-      router.replace('/');
-    }
-  }, [firstSegment, isAuthenticated, isLoading, router]);
+  if (isAuthenticated && isAuthRoute) {
+    router.replace("/(tabs)");
+  }
+  }, [firstSegment, isAuthenticated, isLoading]);
 
   return (
     <>

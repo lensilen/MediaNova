@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
 
-export function RegisterScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const { clearError, error, isAuthenticated, isLoading, register } = useAuth();
   const [displayName, setDisplayName] = useState('');
