@@ -35,6 +35,11 @@ export function SettingsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [privateAccount, setPrivateAccount] = useState(false);
+  const [commentFollowers, setCommentFollowers] = useState(true);
+  const [hideLikes, setHideLikes] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
 
   async function handleSave() {
     if (!user?.uid) {
@@ -134,82 +139,128 @@ export function SettingsScreen() {
         <View style={styles.iconSpacer} />
       </View>
 
-      <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-        <Pressable
-          disabled={isUploading}
-          onPress={handlePickPhoto}
-          style={styles.photoRow}>
-          {photoURL ? (
-            <Image source={{ uri: photoURL }} style={styles.avatarImage} />
-          ) : (
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              <Ionicons name="camera" size={24} color="#FFFFFF" />
-            </View>
-          )}
-          <View style={styles.photoCopy}>
-            <Text style={[styles.photoTitle, { color: colors.text }]}>Foto Profil</Text>
-            <Text style={[styles.photoText, { color: colors.muted }]}>
-              {isUploading ? `Uploading ${uploadProgress}%` : 'Pilih dari galeri'}
+      <SettingsSection colors={colors} title="ACCOUNT VISIBILITY">
+        <SettingRow
+          colors={colors}
+          description="When private, only followers you approve can see what you share."
+          title="Private Account">
+          <Switch
+            onValueChange={setPrivateAccount}
+            value={privateAccount}
+            thumbColor="#FFFFFF"
+            trackColor={{ false: colors.border, true: colors.text }}
+          />
+        </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection colors={colors} title="INTERACTIONS">
+        <SettingRow
+          colors={colors}
+          description="Control who can comment on your high-resolution media."
+          title="Comment Permissions">
+          <Pressable onPress={() => setCommentFollowers((value) => !value)}>
+            <Text style={[styles.menuValue, { color: colors.text }]}>
+              {commentFollowers ? 'Followers' : 'Everyone'}
             </Text>
-          </View>
-          {isUploading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <Ionicons name="image-outline" size={22} color={colors.secondary} />
-          )}
+          </Pressable>
+        </SettingRow>
+        <SettingRow
+          colors={colors}
+          description="Hide the number of likes on your posts to focus on content."
+          title="Like Visibility">
+          <Switch
+            onValueChange={setHideLikes}
+            value={hideLikes}
+            thumbColor="#FFFFFF"
+            trackColor={{ false: colors.border, true: colors.text }}
+          />
+        </SettingRow>
+      </SettingsSection>
+
+      <SettingsSection colors={colors} title="PROFILE">
+        <Pressable
+          onPress={() => setShowEditProfile((value) => !value)}
+          style={styles.linkRow}>
+          <Text style={[styles.linkText, { color: colors.text }]}>Edit Profile</Text>
+          <Ionicons
+            name={showEditProfile ? 'chevron-up' : 'chevron-forward'}
+            size={18}
+            color={colors.muted}
+          />
         </Pressable>
 
-        <TextInput
-          onChangeText={setDisplayName}
-          placeholder="Nama"
-          placeholderTextColor={colors.muted}
-          style={[
-            styles.input,
-            { borderColor: colors.border, color: colors.text, backgroundColor: colors.background },
-          ]}
-          value={displayName}
-        />
-        <TextInput
-          multiline
-          onChangeText={setBio}
-          placeholder="Bio"
-          placeholderTextColor={colors.muted}
-          style={[
-            styles.input,
-            styles.textArea,
-            { borderColor: colors.border, color: colors.text, backgroundColor: colors.background },
-          ]}
-          value={bio}
-        />
+        {showEditProfile ? (
+          <View style={[styles.editPanel, { borderTopColor: colors.border }]}>
+            <Pressable
+              disabled={isUploading}
+              onPress={handlePickPhoto}
+              style={styles.photoRow}>
+              {photoURL ? (
+                <Image source={{ uri: photoURL }} style={styles.avatarImage} />
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: colors.text }]}>
+                  <Ionicons name="camera" size={22} color={colors.surface} />
+                </View>
+              )}
+              <View style={styles.photoCopy}>
+                <Text style={[styles.photoTitle, { color: colors.text }]}>Foto Profil</Text>
+                <Text style={[styles.photoText, { color: colors.muted }]}>
+                  {isUploading ? `Uploading ${uploadProgress}%` : 'Pilih dari galeri'}
+                </Text>
+              </View>
+            </Pressable>
 
-        <Pressable
-          disabled={isSaving}
-          onPress={handleSave}
-          style={[styles.saveButton, { backgroundColor: colors.primary }, isSaving && styles.disabled]}>
-          {isSaving ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.saveText}>Simpan Profil</Text>
-          )}
-        </Pressable>
-      </View>
+            <TextInput
+              onChangeText={setDisplayName}
+              placeholder="Nama"
+              placeholderTextColor={colors.muted}
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              value={displayName}
+            />
+            <TextInput
+              multiline
+              onChangeText={setBio}
+              placeholder="Bio"
+              placeholderTextColor={colors.muted}
+              style={[styles.input, styles.textArea, { borderColor: colors.border, color: colors.text }]}
+              value={bio}
+            />
 
-      <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-        <View style={styles.settingRow}>
-          <View>
-            <Text style={[styles.settingTitle, { color: colors.text }]}>Dark Mode</Text>
-            <Text style={[styles.settingText, { color: colors.muted }]}>
-              Sesuaikan tampilan profil dan settings.
-            </Text>
+            <Pressable
+              disabled={isSaving}
+              onPress={handleSave}
+              style={[styles.saveButton, { backgroundColor: colors.text }, isSaving && styles.disabled]}>
+              {isSaving ? (
+                <ActivityIndicator color={colors.surface} />
+              ) : (
+                <Text style={[styles.saveText, { color: colors.surface }]}>Simpan Profil</Text>
+              )}
+            </Pressable>
           </View>
+        ) : null}
+      </SettingsSection>
+
+      <SettingsSection colors={colors} title="DATA & HISTORY">
+        <SettingRow colors={colors} description="Get a copy of your content and activity." title="Download Your Data">
+          <Ionicons name="download-outline" size={20} color={colors.muted} />
+        </SettingRow>
+        <SettingRow colors={colors} description="Keep saved content ready when connection drops." title="Offline Mode">
+          <Switch
+            onValueChange={setOfflineMode}
+            value={offlineMode}
+            thumbColor="#FFFFFF"
+            trackColor={{ false: colors.border, true: colors.text }}
+          />
+        </SettingRow>
+        <SettingRow colors={colors} description="Switch between the UI/UX light mode and dark mode." title="Theme">
           <Switch
             onValueChange={toggleMode}
             value={isDark}
-            thumbColor={isDark ? colors.secondary : '#FFFFFF'}
-            trackColor={{ false: '#D8CFE4', true: colors.primary }}
+            thumbColor="#FFFFFF"
+            trackColor={{ false: colors.border, true: colors.text }}
           />
-        </View>
-      </View>
+        </SettingRow>
+      </SettingsSection>
 
       <Pressable
         disabled={isLoggingOut}
@@ -222,5 +273,28 @@ export function SettingsScreen() {
         )}
       </Pressable>
     </ScrollView>
+  );
+}
+
+function SettingsSection({ children, colors, title }) {
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionLabel, { color: colors.muted }]}>{title}</Text>
+      <View style={[styles.panel, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+function SettingRow({ children, colors, description, title }) {
+  return (
+    <View style={styles.settingRow}>
+      <View style={styles.settingCopy}>
+        <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.settingText, { color: colors.muted }]}>{description}</Text>
+      </View>
+      {children}
+    </View>
   );
 }
