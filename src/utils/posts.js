@@ -81,6 +81,7 @@ export async function createPost(
     mediaURL: cleanMediaURL,
     thumbnailURL: cleanThumbnailURL,
     caption: cleanCaption,
+    captionLower: cleanCaption.toLowerCase(),
     likes: 0,
     commentsCount: 0,
     createdAt: serverTimestamp(),

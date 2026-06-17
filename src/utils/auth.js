@@ -30,10 +30,15 @@ export function formatAuthUser(user, overrides = {}) {
 }
 
 function buildUserProfile(user, overrides = {}) {
+  const displayName = overrides.displayName || user.displayName || "User";
+  const email = overrides.email || user.email || "";
+
   return {
     uid: user.uid,
-    displayName: overrides.displayName || user.displayName || "User",
-    email: overrides.email || user.email || "",
+    displayName,
+    displayNameLower: displayName.toLowerCase(),
+    email,
+    emailLower: email.toLowerCase(),
     photoURL: overrides.photoURL || user.photoURL || "",
     bio: overrides.bio || "",
     followers: overrides.followers ?? 0,
