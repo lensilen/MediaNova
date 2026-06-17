@@ -1,5 +1,3 @@
-import { View } from "react-native";
+import { FeedScreen } from "../../screens/home/FeedScreen";
 
-export default function Index() {
-  return <View />;
-}
+export default FeedScreen;

@@ -8,6 +8,7 @@ import {
   onAuthStateChanged,
   registerWithEmail,
 } from "../utils/auth";
+import { getUserProfile } from "../utils/profile";
 
 let authSubscription = null;
 let authHookUsers = 0;
@@ -21,14 +22,23 @@ function startAuthSubscription() {
   store.setLoading(true);
 
   authSubscription = onAuthStateChanged(
-    (user) => {
+    async (user) => {
       const latestStore = useAuthStore.getState();
       latestStore.setUser(user);
-      latestStore.setLoading(false);
 
       if (!user) {
         latestStore.setProfile(null);
+        latestStore.setLoading(false);
+        return;
       }
+
+      const profileResult = await getUserProfile(user.uid);
+
+      if (profileResult.success) {
+        latestStore.setProfile(profileResult.profile);
+      }
+
+      latestStore.setLoading(false);
     },
     () => {
       const latestStore = useAuthStore.getState();

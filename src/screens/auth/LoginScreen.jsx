@@ -1,79 +1,102 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  View,
 } from "react-native";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
+
+import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function LoginScreen() {
+  const router = useRouter();
+  const { clearError, error, isAuthenticated, isLoading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth();
-  const handleGoogleLogin = async () => {
-    console.log("Google login clicked");
-    router.replace("/(tabs)"); 
-  };
+  const [formError, setFormError] = useState("");
 
-  const handleLogin = async () => {
-  const result = await login(email, password);
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, router]);
 
-  if (result.success) {
-    router.replace("/(tabs)");
-  } else {
-    alert(result.error);
+  function resetErrors() {
+    setFormError("");
+    clearError();
   }
-};
+
+  async function handleLogin() {
+    resetErrors();
+
+    if (!email.trim() || !password) {
+      setFormError("Email dan password wajib diisi.");
+      return;
+    }
+
+    await login(email, password);
+  }
+
+  const message = formError || error;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>MediaNova</Text>
-
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor="#BBAFC8"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-      />
-
-      <TextInput
-          placeholder="Password"
-          placeholderTextColor="#BBAFC8"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          selectionColor="#A855F7"
-      />
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-      >
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-      style={styles.googleButton}
-      onPress={handleGoogleLogin}
-      >
-      <Text style={styles.googleButtonText}>
-        Login dengan Google
-      </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => router.push("/auth/register")}
-      >
-        <Text style={styles.link}>
-          Belum punya akun? Register
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.container}
+    >
+      <View style={styles.card}>
+        <Text style={styles.brand}>MediaNova</Text>
+        <Text style={styles.title}>Masuk</Text>
+        <Text style={styles.subtitle}>
+          Masuk untuk mengelola konten dan melihat feed.
         </Text>
-      </TouchableOpacity>
-    </View>
+
+        <View style={styles.form}>
+          <TextInput
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            value={email}
+          />
+          <TextInput
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor={colors.muted}
+            secureTextEntry
+            style={styles.input}
+            value={password}
+          />
+
+          {message ? <Text style={styles.error}>{message}</Text> : null}
+
+          <Pressable
+            disabled={isLoading}
+            onPress={handleLogin}
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={styles.buttonText}>Masuk</Text>
+            )}
+          </Pressable>
+        </View>
+
+        <Pressable onPress={() => router.push("/auth/register")}>
+          <Text style={styles.link}>Belum punya akun? Daftar</Text>
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -82,64 +105,65 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 24,
-    backgroundColor: "#0F0A14",
+    backgroundColor: colors.background,
   },
-
+  card: {
+    gap: 14,
+  },
+  brand: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
   title: {
+    color: colors.text,
     fontSize: 32,
     fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 40,
-    color: "#FFFFFF",
   },
-
+  subtitle: {
+    color: colors.muted,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  form: {
+    gap: 12,
+  },
   input: {
-    minHeight: 54,
+    minHeight: 52,
     borderWidth: 1,
-    borderColor: "#342242",
-    borderRadius: 12,
-    backgroundColor: "#1B1224",
-    color: "#FFFFFF",
+    borderColor: colors.border,
+    borderRadius: 8,
+    color: colors.text,
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-
-  button: {
-    minHeight: 54,
-    backgroundColor: "#A855F7",
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-
-  buttonText: {
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontWeight: "700",
     fontSize: 16,
   },
-
-  link: {
-    textAlign: "center",
-    color: "#EC4899",
+  error: {
+    color: "#FCA5A5",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  button: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: colors.text,
+    fontSize: 16,
     fontWeight: "700",
   },
-
-  googleButton: {
-  minHeight: 54,
-  borderWidth: 1,
-  borderColor: "#342242",
-  borderRadius: 12,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "#FFFFFF",
-  marginBottom: 15,
-},
-
-googleButtonText: {
-  color: "#000000",
-  fontWeight: "700",
-},
-  
+  link: {
+    color: colors.secondary,
+    marginTop: 8,
+    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "700",
+  },
 });
