@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -11,11 +12,30 @@ import { useRouter } from 'expo-router';
 
 import { colors } from '../../constants/theme';
 import { useAuth } from '../../hooks/useAuth';
+import { getUserPosts } from '../../utils/posts';
 
 export function ProfileScreen() {
   const router = useRouter();
   const { error, profile, signOut, user } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [postCount, setPostCount] = useState(0);
+
+  useEffect(() => {
+    async function loadPostCount() {
+      if (!user?.uid) {
+        setPostCount(0);
+        return;
+      }
+
+      const result = await getUserPosts(user.uid);
+
+      if (result.success) {
+        setPostCount(result.posts.length);
+      }
+    }
+
+    loadPostCount();
+  }, [user?.uid]);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -39,20 +59,29 @@ export function ProfileScreen() {
 
   const displayName = profile?.displayName || user?.displayName || 'User';
   const email = profile?.email || user?.email || '-';
+  const photoURL = profile?.photoURL || user?.photoURL || '';
+  const bio = profile?.bio || '';
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-        </View>
+        {photoURL ? (
+          <Image source={{ uri: photoURL }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {displayName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
         <Text style={styles.name}>{displayName}</Text>
         <Text style={styles.email}>{email}</Text>
+        {bio ? <Text style={styles.bio}>{bio}</Text> : null}
       </View>
 
       <View style={styles.stats}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>0</Text>
+          <Text style={styles.statValue}>{postCount}</Text>
           <Text style={styles.statLabel}>Post</Text>
         </View>
         <View style={styles.statItem}>
@@ -105,6 +134,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     marginBottom: 14,
   },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: 14,
+    backgroundColor: colors.surface,
+  },
   avatarText: {
     color: colors.text,
     fontSize: 34,
@@ -119,6 +155,13 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 6,
     fontSize: 14,
+  },
+  bio: {
+    color: colors.text,
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   stats: {
     flexDirection: 'row',
