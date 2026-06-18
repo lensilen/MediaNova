@@ -12,6 +12,7 @@ import {
   getSocialErrorMessage,
   normalizeText,
 } from "./socialHelpers";
+import { createNotification } from "./notifications";
 
 export async function followUser(followerId, followingId) {
   const cleanFollowerId = normalizeText(followerId);
@@ -60,6 +61,10 @@ export async function followUser(followerId, followingId) {
 
       return { changed: true };
     });
+
+    if (transactionResult.changed) {
+      await createNotification(cleanFollowingId, cleanFollowerId, "follow");
+    }
 
     return {
       success: true,

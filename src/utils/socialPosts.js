@@ -24,6 +24,7 @@ import {
   sortNewestFirst,
   validatePostUser,
 } from "./socialHelpers";
+import { createNotification } from "./notifications";
 
 export async function likePost(postId, userId) {
   const validation = validatePostUser(postId, userId);
@@ -45,8 +46,10 @@ export async function likePost(postId, userId) {
         throw createSocialError("post-not-found", "Post tidak ditemukan.");
       }
 
+      const post = postSnapshot.data();
+
       if (likeSnapshot.exists()) {
-        return { changed: false };
+        return { changed: false, toUserId: post.userId };
       }
 
       transaction.set(likeRef, {
@@ -59,8 +62,17 @@ export async function likePost(postId, userId) {
         updatedAt: serverTimestamp(),
       });
 
-      return { changed: true };
+      return { changed: true, toUserId: post.userId };
     });
+
+    if (transactionResult.changed) {
+      await createNotification(
+        transactionResult.toUserId,
+        validation.userId,
+        "like",
+        validation.postId,
+      );
+    }
 
     return {
       success: true,
@@ -158,19 +170,30 @@ export async function addComment(postId, userId, text) {
   };
 
   try {
-    await runTransaction(db, async (transaction) => {
+    const transactionResult = await runTransaction(db, async (transaction) => {
       const postSnapshot = await transaction.get(postRef);
 
       if (!postSnapshot.exists()) {
         throw createSocialError("post-not-found", "Post tidak ditemukan.");
       }
 
+      const post = postSnapshot.data();
+
       transaction.set(commentRef, payload);
       transaction.update(postRef, {
         commentsCount: increment(1),
         updatedAt: serverTimestamp(),
       });
+
+      return { toUserId: post.userId };
     });
+
+    await createNotification(
+      transactionResult.toUserId,
+      validation.userId,
+      "comment",
+      validation.postId,
+    );
 
     return { success: true, comment: { id: commentRef.id, ...payload } };
   } catch (error) {
