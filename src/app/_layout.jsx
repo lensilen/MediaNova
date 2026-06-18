@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from '../constants/theme';
+import { OfflineBanner } from '../components/shared/OfflineBanner';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
         <Stack.Screen name="audio-player" />
         <Stack.Screen name="settings" />
       </Stack>
+      <OfflineBanner />
       {isLoading ? (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator color={colors.primary} size="large" />

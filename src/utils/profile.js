@@ -12,6 +12,7 @@ import {
 import { updateProfile as updateAuthProfile } from "firebase/auth";
 
 import { auth, db } from "./firebase";
+import { cacheUserProfile, getCachedUserProfile } from "./cache";
 import { getPostById } from "./posts";
 import { uploadImage } from "./upload";
 
@@ -57,8 +58,21 @@ export async function getUserProfile(userId) {
       return { success: false, error: "Profil user tidak ditemukan." };
     }
 
+    await cacheUserProfile(cleanUserId, profile);
+
     return { success: true, profile };
   } catch (error) {
+    const cachedProfile = await getCachedUserProfile(cleanUserId);
+
+    if (cachedProfile.profile) {
+      return {
+        success: true,
+        profile: cachedProfile.profile,
+        fromCache: true,
+        cachedAt: cachedProfile.cachedAt,
+      };
+    }
+
     return { success: false, error: getProfileErrorMessage(error.code) };
   }
 }

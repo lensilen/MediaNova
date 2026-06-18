@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "./firebase";
+import { cacheFeedPosts, getCachedFeedPosts } from "./cache";
 
 export const POST_TYPES = ["video", "audio", "photo"];
 
@@ -117,6 +118,10 @@ export async function getFeedPosts(pageSize = 10, lastDoc = null) {
     const posts = snapshot.docs.map(normalizePostSnapshot).filter(Boolean);
     const nextLastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
 
+    if (!lastDoc) {
+      await cacheFeedPosts(posts);
+    }
+
     return {
       success: true,
       posts,
@@ -124,6 +129,21 @@ export async function getFeedPosts(pageSize = 10, lastDoc = null) {
       hasMore: snapshot.docs.length === safeLimit,
     };
   } catch (error) {
+    if (!lastDoc) {
+      const cachedFeed = await getCachedFeedPosts();
+
+      if (cachedFeed.posts.length > 0) {
+        return {
+          success: true,
+          posts: cachedFeed.posts,
+          lastDoc: null,
+          hasMore: false,
+          fromCache: true,
+          cachedAt: cachedFeed.cachedAt,
+        };
+      }
+    }
+
     return { success: false, error: getPostErrorMessage(error.code) };
   }
 }
