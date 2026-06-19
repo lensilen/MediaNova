@@ -1,0 +1,236 @@
+import { StyleSheet } from "react-native";
+
+import { colors } from "../../constants/theme";
+
+export const createStyles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  header: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  iconButton: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 19,
+    backgroundColor: colors.surfaceSoft,
+  },
+  nextButton: {
+    minWidth: 62,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+  },
+  nextText: {
+    color: colors.onPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  title: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  cameraShell: {
+    flex: 1,
+    marginTop: 10,
+    marginBottom: 18,
+    borderRadius: 28,
+    overflow: "hidden",
+    backgroundColor: colors.primary,
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: colors.tertiary,
+  },
+  fallbackTitle: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 12,
+  },
+  fallbackText: {
+    color: colors.secondary,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    marginTop: 8,
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  filterTint: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  topOverlay: {
+    position: "absolute",
+    top: 18,
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  timerPill: {
+    borderRadius: 16,
+    backgroundColor: "rgba(31,29,28,0.54)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  timerText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  sideTools: {
+    position: "absolute",
+    right: 12,
+    top: 92,
+    gap: 12,
+  },
+  sideTool: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 19,
+    backgroundColor: "rgba(31,29,28,0.46)",
+  },
+  sideToolActive: {
+    backgroundColor: colors.primary,
+  },
+  bottomOverlay: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 18,
+    gap: 14,
+  },
+  modeSwitch: {
+    alignSelf: "center",
+    flexDirection: "row",
+    borderRadius: 22,
+    backgroundColor: "rgba(245,239,235,0.74)",
+    padding: 4,
+  },
+  modeItem: {
+    minWidth: 76,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+  },
+  modeItemActive: {
+    backgroundColor: colors.primary,
+  },
+  modeText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  modeTextActive: {
+    color: colors.onPrimary,
+  },
+  captureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  captureButton: {
+    width: 74,
+    height: 74,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 37,
+    borderWidth: 5,
+    borderColor: colors.surface,
+    backgroundColor: "#C81E1E",
+  },
+  captureInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+  },
+  captureRecording: {
+    borderRadius: 12,
+  },
+  miniThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    backgroundColor: colors.surfaceSoft,
+    overflow: "hidden",
+  },
+  thumbImage: {
+    width: "100%",
+    height: "100%",
+  },
+  filterRail: {
+    maxHeight: 68,
+  },
+  filterChip: {
+    minWidth: 74,
+    alignItems: "center",
+    marginRight: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.42)",
+    backgroundColor: "rgba(245,239,235,0.78)",
+    padding: 7,
+  },
+  filterChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.tertiary,
+  },
+  filterSwatch: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginBottom: 5,
+    backgroundColor: colors.tertiary,
+  },
+  filterLabel: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  waveformRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  waveformBar: {
+    width: 4,
+    borderRadius: 3,
+  },
+});

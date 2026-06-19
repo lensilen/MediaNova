@@ -1,9 +1,5 @@
-import { Text, View } from 'react-native';
+import { VideoRecorderScreen } from "../create/VideoRecorderScreen";
 
 export function AudioRecorderScreen() {
-  return (
-    <View>
-      <Text>AudioRecorderScreen</Text>
-    </View>
-  );
+  return <VideoRecorderScreen initialMode="audio" />;
 }
