@@ -6,21 +6,25 @@ export const mediaModes = [
   { key: "audio", label: "Audio", icon: "mic-outline" },
 ];
 
+export const noFilter = { key: "none", label: "", tint: "rgba(255,255,255,0)" };
+
 export const filters = [
-  { key: "normal", label: "Normal", tint: "rgba(255,255,255,0)" },
-  { key: "mono", label: "Mono", tint: "rgba(31,29,28,0.32)" },
-  { key: "sepia", label: "Sepia", tint: "rgba(120,79,39,0.22)" },
-  { key: "vivid", label: "Vivid", tint: "rgba(86,124,141,0.24)" },
-  { key: "warm", label: "Warm", tint: "rgba(217,119,6,0.18)" },
-  { key: "cool", label: "Cool", tint: "rgba(47,65,86,0.24)" },
+  { key: "grayscale", label: "Grayscale", tint: "rgba(31,29,28,0.48)" },
+  { key: "sepia", label: "Sepia", tint: "rgba(120,79,39,0.36)" },
+  { key: "vivid", label: "Vivid", tint: "rgba(86,124,141,0.34)" },
+  { key: "warm", label: "Warm", tint: "rgba(217,119,6,0.3)" },
+  { key: "cool", label: "Cool", tint: "rgba(47,65,86,0.4)" },
 ];
 
 export const cameraTools = [
   { key: "timer", label: "Timer", icon: "timer-outline" },
+  { key: "flash", label: "Flash", icon: "flash-outline" },
   { key: "filter", label: "Filter", icon: "color-filter-outline" },
   { key: "beauty", label: "Adjust", icon: "sparkles-outline" },
   { key: "grid", label: "Grid", icon: "grid-outline" },
 ];
+
+export const flashModes = ["off", "on", "auto"];
 
 export const videoTools = [
   { key: "trim", label: "Trim", icon: "cut-outline" },
