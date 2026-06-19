@@ -1,70 +1,57 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import {
-  RecordingPresets,
-  requestRecordingPermissionsAsync,
-  setAudioModeAsync,
-  useAudioRecorder,
-  useAudioRecorderState,
-} from "expo-audio";
+import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  SafeAreaView,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, SafeAreaView, Text, View } from "react-native";
 
 import { colors } from "../../constants/theme";
-import { filters, formatTime } from "./createOptions";
+import { flashModes, noFilter } from "./createOptions";
 import { AudioCapturePanel } from "./AudioCapturePanel";
 import { CameraPermissionPanel } from "./CameraPermissionPanel";
-import { CreateModeControls } from "./CreateModeControls";
-import { CreateToolOverlay } from "./CreateToolOverlay";
+import { CreateCameraShell } from "./CreateCameraShell";
 import { createStyles as styles } from "./createStyles";
+import { useMediaPermissions } from "./useMediaPermissions";
 
-function getNextRoute(type) {
-  if (type === "audio") return "/audio-editor";
-  if (type === "photo") return "/photo-editor";
-  return "/video-editor";
-}
+const getNextRoute = (type) => type === "audio" ? "/audio-editor" : type === "photo" ? "/photo-editor" : "/video-editor";
 
 export function VideoRecorderScreen({ initialMode = "video" }) {
   const router = useRouter();
   const cameraRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
+  const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const [mode, setMode] = useState(initialMode);
   const [facing, setFacing] = useState("back");
-  const [selectedFilter, setSelectedFilter] = useState(filters[0]);
+  const [selectedFilter, setSelectedFilter] = useState(noFilter);
+  const [flashMode, setFlashMode] = useState("off");
   const [pendingMedia, setPendingMedia] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [videoPaused, setVideoPaused] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [cameraReady, setCameraReady] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [countdown, setCountdown] = useState(0);
+  const [countdownAction, setCountdownAction] = useState(null), [showFilters, setShowFilters] = useState(false);
+  const { ensureCameraPermission, ensureVideoPermission } = useMediaPermissions({
+    cameraPermission: permission,
+    micPermission,
+    requestCameraPermission: requestPermission,
+    requestMicPermission,
+  });
 
   useEffect(() => {
-    if (!isRecording) return undefined;
+    if (!isRecording || videoPaused) return undefined;
 
     const timer = setInterval(() => {
       setRecordSeconds((seconds) => seconds + 1);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isRecording]);
-
-  const ensureCameraPermission = useCallback(async () => {
-    if (permission?.granted) return true;
-
-    const nextPermission = await requestPermission();
-    return nextPermission.granted;
-  }, [permission?.granted, requestPermission]);
+  }, [isRecording, videoPaused]);
 
   const takePhoto = useCallback(async () => {
     if (!(await ensureCameraPermission()) || !cameraReady) return;
@@ -83,27 +70,12 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     }
   }, [cameraReady, ensureCameraPermission]);
 
-  useEffect(() => {
-    if (!countdown) return undefined;
-
-    const timer = setTimeout(() => {
-      if (countdown === 1) {
-        setCountdown(0);
-        takePhoto();
-        return;
-      }
-
-      setCountdown((value) => value - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdown, takePhoto]);
-
-  async function startVideoRecording() {
-    if (!(await ensureCameraPermission()) || !cameraReady) return;
+  const startVideoRecording = useCallback(async () => {
+    if (!(await ensureVideoPermission()) || !cameraReady) return;
 
     try {
       setIsRecording(true);
+      setVideoPaused(false);
       setRecordSeconds(0);
       const video = await cameraRef.current?.recordAsync({ maxDuration: 60 });
 
@@ -114,21 +86,49 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       Alert.alert("Rekam video gagal", "Pastikan izin kamera dan mikrofon aktif.");
     } finally {
       setIsRecording(false);
+      setVideoPaused(false);
     }
-  }
+  }, [cameraReady, ensureVideoPermission]);
+
+  useEffect(() => {
+    if (!countdown) return undefined;
+
+    const timer = setTimeout(() => {
+      if (countdown === 1) {
+        setCountdown(0);
+        if (countdownAction === "video") {
+          startVideoRecording();
+        } else {
+          takePhoto();
+        }
+        setCountdownAction(null);
+        return;
+      }
+
+      setCountdown((value) => value - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown, countdownAction, startVideoRecording, takePhoto]);
 
   function stopVideoRecording() {
     cameraRef.current?.stopRecording();
+  }
+
+  async function toggleVideoPause() {
+    try {
+      await cameraRef.current?.toggleRecordingAsync();
+      setVideoPaused((paused) => !paused);
+    } catch {
+      Alert.alert("Pause video belum didukung", "Device ini hanya mendukung stop untuk menyelesaikan video.");
+    }
   }
 
   async function toggleAudioRecording() {
     if (recorderState.isRecording) {
       await recorder.stop();
       await setAudioModeAsync({ allowsRecording: false });
-      setPendingMedia({
-        type: "audio",
-        uri: recorder.uri || recorderState.url,
-      });
+      setPendingMedia({ type: "audio", uri: recorder.uri || recorderState.url });
       return;
     }
 
@@ -139,10 +139,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       return;
     }
 
-    await setAudioModeAsync({
-      allowsRecording: true,
-      playsInSilentMode: true,
-    });
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
     setPendingMedia(null);
@@ -167,6 +164,12 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
   }
 
   function handleCapture() {
+    if (countdown > 0) {
+      setCountdown(0);
+      setCountdownAction(null);
+      return;
+    }
+
     if (mode === "audio") {
       toggleAudioRecording();
       return;
@@ -174,6 +177,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
 
     if (mode === "photo") {
       if (timerSeconds > 0) {
+        setCountdownAction("photo");
         setCountdown(timerSeconds);
         return;
       }
@@ -184,6 +188,12 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
 
     if (isRecording) {
       stopVideoRecording();
+      return;
+    }
+
+    if (timerSeconds > 0) {
+      setCountdownAction("video");
+      setCountdown(timerSeconds);
       return;
     }
 
@@ -198,11 +208,14 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       return;
     }
 
+    if (toolKey === "flash") {
+      const nextIndex = (flashModes.indexOf(flashMode) + 1) % flashModes.length;
+      setFlashMode(flashModes[nextIndex]);
+      return;
+    }
+
     if (toolKey === "filter") {
-      const currentIndex = filters.findIndex(
-        (filter) => filter.key === selectedFilter.key,
-      );
-      setSelectedFilter(filters[(currentIndex + 1) % filters.length]);
+      setShowFilters((visible) => !visible);
     }
   }
 
@@ -226,8 +239,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     if (mode === "audio") {
       return (
         <AudioCapturePanel
-          durationMillis={recorderState.durationMillis}
-          isRecording={recorderState.isRecording}
+          durationMillis={recorderState.durationMillis} isRecording={recorderState.isRecording}
         />
       );
     }
@@ -240,6 +252,8 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       <CameraView
         ref={cameraRef}
         facing={facing}
+        enableTorch={mode === "video" && flashMode !== "off"}
+        flash={flashMode}
         mode={mode === "photo" ? "picture" : "video"}
         onCameraReady={() => setCameraReady(true)}
         style={styles.camera}
@@ -263,37 +277,23 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
           </Pressable>
         </View>
 
-        <View style={styles.cameraShell}>
-          {renderCameraContent()}
-          {mode !== "audio" ? (
-            <View
-              pointerEvents="none"
-              style={[styles.filterTint, { backgroundColor: selectedFilter.tint }]}
-            />
-          ) : null}
-
-          <CreateToolOverlay
-            countdown={countdown}
-            formattedRecordTime={formatTime(recordSeconds)}
-            onFlipCamera={() =>
-              setFacing((value) => (value === "back" ? "front" : "back"))
-            }
-            onToolPress={handleToolPress}
-            selectedFilter={selectedFilter}
-          />
-
-          <CreateModeControls
-            activeRecording={activeRecording}
-            mode={mode}
-            onCapture={handleCapture}
-            onFilterSelect={setSelectedFilter}
-            onLibraryPress={pickFromLibrary}
-            onModeChange={setMode}
-            onResetFilter={() => setSelectedFilter(filters[0])}
-            pendingMedia={pendingMedia}
-            selectedFilter={selectedFilter}
-          />
-        </View>
+        <CreateCameraShell
+          activeRecording={activeRecording} countdown={countdown}
+          flashMode={flashMode} mode={mode}
+          onCapture={handleCapture}
+          onFilterSelect={(filter) => setSelectedFilter(selectedFilter.key === filter.key ? noFilter : filter)}
+          onFlipCamera={() => setFacing((value) => (value === "back" ? "front" : "back"))}
+          onLibraryPress={pickFromLibrary}
+          onModeChange={setMode}
+          onPauseVideo={toggleVideoPause}
+          onResetFilter={() => setSelectedFilter(noFilter)}
+          onToolPress={handleToolPress}
+          pendingMedia={pendingMedia}
+          recordSeconds={recordSeconds}
+          renderCameraContent={renderCameraContent}
+          selectedFilter={selectedFilter} showFilters={showFilters}
+          timerSeconds={timerSeconds} videoPaused={videoPaused}
+        />
       </View>
     </SafeAreaView>
   );

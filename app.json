@@ -31,7 +31,20 @@
         }
       ],
       "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MediaNova membutuhkan kamera untuk membuat foto dan video.",
+          "microphonePermission": "MediaNova membutuhkan mikrofon untuk merekam video dan audio."
+        }
+      ],
       "expo-audio",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MediaNova membutuhkan galeri untuk memilih media."
+        }
+      ],
       "expo-web-browser",
       "expo-notifications"
     ]

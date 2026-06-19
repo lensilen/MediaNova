@@ -5,20 +5,26 @@ import { cameraTools } from "./createOptions";
 import { createStyles as styles } from "./createStyles";
 
 export function CreateToolOverlay({
-  countdown,
+  activeRecording,
+  activeTools,
+  filterLabel,
+  flashMode,
   formattedRecordTime,
+  isCountingDown,
   onFlipCamera,
   onToolPress,
-  selectedFilter,
+  timerSeconds,
 }) {
   return (
     <>
       <View style={styles.topOverlay}>
-        <View style={styles.timerPill}>
-          <Text style={styles.timerText}>
-            {countdown ? countdown : formattedRecordTime}
-          </Text>
-        </View>
+        {activeRecording ? (
+          <View style={styles.timerPill}>
+            <Text style={styles.timerText}>{formattedRecordTime}</Text>
+          </View>
+        ) : (
+          <View />
+        )}
         <Pressable style={styles.sideTool} onPress={onFlipCamera}>
           <Ionicons name="camera-reverse-outline" size={20} color="#FFFFFF" />
         </Pressable>
@@ -31,12 +37,27 @@ export function CreateToolOverlay({
             onPress={() => onToolPress(tool.key)}
             style={[
               styles.sideTool,
-              tool.key === "filter" && selectedFilter.key !== "normal"
-                ? styles.sideToolActive
-                : null,
+              activeTools.includes(tool.key) ? styles.sideToolActive : null,
             ]}
           >
             <Ionicons name={tool.icon} size={18} color="#FFFFFF" />
+            {tool.key === "timer" && timerSeconds > 0 && !isCountingDown ? (
+              <View style={styles.sideToolBadge}>
+                <Text style={styles.sideToolBadgeText}>{timerSeconds}s</Text>
+              </View>
+            ) : null}
+            {tool.key === "flash" && flashMode !== "off" ? (
+              <View style={styles.sideToolBadge}>
+                <Text style={styles.sideToolBadgeText}>
+                  {flashMode === "auto" ? "A" : "ON"}
+                </Text>
+              </View>
+            ) : null}
+            {tool.key === "filter" && filterLabel ? (
+              <View style={styles.sideToolBadge}>
+                <Text style={styles.sideToolBadgeText}>{filterLabel[0]}</Text>
+              </View>
+            ) : null}
           </Pressable>
         ))}
       </View>

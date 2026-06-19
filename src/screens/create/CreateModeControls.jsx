@@ -12,36 +12,50 @@ export function CreateModeControls({
   onFilterSelect,
   onLibraryPress,
   onModeChange,
+  onPauseVideo,
   onResetFilter,
   pendingMedia,
   selectedFilter,
+  showFilters,
+  videoPaused,
 }) {
+  const isVideoRecording = mode === "video" && activeRecording;
+
   return (
     <View style={styles.bottomOverlay}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterRail}
-      >
-        {filters.map((filter) => (
-          <Pressable
-            key={filter.key}
-            onPress={() => onFilterSelect(filter)}
-            style={[
-              styles.filterChip,
-              selectedFilter.key === filter.key ? styles.filterChipActive : null,
-            ]}
-          >
-            <View
+      {showFilters ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRail}
+        >
+          {filters.map((filter) => (
+            <Pressable
+              key={filter.key}
+              onPress={() => onFilterSelect(filter)}
               style={[
-                styles.filterSwatch,
-                { backgroundColor: filter.tint || colors.tertiary },
+                styles.filterChip,
+                selectedFilter.key === filter.key ? styles.filterChipActive : null,
               ]}
-            />
-            <Text style={styles.filterLabel}>{filter.label}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+            >
+              <View
+                style={[
+                  styles.filterSwatch,
+                  { backgroundColor: filter.tint || colors.tertiary },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.filterLabel,
+                  selectedFilter.key === filter.key ? styles.filterLabelActive : null,
+                ]}
+              >
+                {filter.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
 
       <View style={styles.modeSwitch}>
         {mediaModes.map((item) => (
@@ -73,16 +87,26 @@ export function CreateModeControls({
             <Ionicons name="images-outline" size={22} color={colors.primary} />
           )}
         </Pressable>
-        <Pressable style={styles.captureButton} onPress={onCapture}>
+        <Pressable
+          style={[styles.captureButton, isVideoRecording ? styles.stopButton : null]}
+          onPress={onCapture}
+        >
           <View
             style={[
               styles.captureInner,
-              activeRecording ? styles.captureRecording : null,
+              isVideoRecording ? styles.stopInner : null,
             ]}
           />
         </Pressable>
-        <Pressable style={styles.iconButton} onPress={onResetFilter}>
-          <Ionicons name="refresh" size={20} color={colors.primary} />
+        <Pressable
+          style={styles.iconButton}
+          onPress={isVideoRecording ? onPauseVideo : onResetFilter}
+        >
+          <Ionicons
+            name={isVideoRecording && !videoPaused ? "pause" : isVideoRecording ? "play" : "refresh"}
+            size={20}
+            color={colors.primary}
+          />
         </Pressable>
       </View>
     </View>

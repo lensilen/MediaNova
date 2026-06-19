@@ -126,12 +126,46 @@ export const createStyles = StyleSheet.create({
   sideToolActive: {
     backgroundColor: colors.primary,
   },
+  sideToolBadge: {
+    position: "absolute",
+    right: -4,
+    bottom: -5,
+    minWidth: 20,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    backgroundColor: colors.tertiary,
+    paddingHorizontal: 4,
+  },
+  sideToolBadgeText: {
+    color: colors.primary,
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  countdownOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 150,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(31,29,28,0.2)",
+    zIndex: 5,
+  },
+  countdownText: {
+    color: "#FFFFFF",
+    fontSize: 76,
+    fontWeight: "900",
+  },
   bottomOverlay: {
     position: "absolute",
     left: 12,
     right: 12,
     bottom: 18,
     gap: 14,
+    zIndex: 4,
   },
   modeSwitch: {
     alignSelf: "center",
@@ -173,6 +207,9 @@ export const createStyles = StyleSheet.create({
     borderColor: colors.surface,
     backgroundColor: "#C81E1E",
   },
+  stopButton: {
+    backgroundColor: "rgba(31,29,28,0.72)",
+  },
   captureInner: {
     width: 28,
     height: 28,
@@ -181,6 +218,11 @@ export const createStyles = StyleSheet.create({
   },
   captureRecording: {
     borderRadius: 12,
+  },
+  stopInner: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
   },
   miniThumb: {
     width: 48,
@@ -210,7 +252,7 @@ export const createStyles = StyleSheet.create({
   },
   filterChipActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.tertiary,
+    backgroundColor: colors.primary,
   },
   filterSwatch: {
     width: 34,
@@ -223,6 +265,9 @@ export const createStyles = StyleSheet.create({
     color: colors.primary,
     fontSize: 10,
     fontWeight: "800",
+  },
+  filterLabelActive: {
+    color: colors.onPrimary,
   },
   waveformRow: {
     flexDirection: "row",
