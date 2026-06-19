@@ -65,11 +65,15 @@ export async function createPost(
   mediaURL,
   thumbnailURL = "",
   caption = "",
+  metadata = {},
 ) {
   const cleanUserId = normalizeText(userId);
   const cleanMediaURL = normalizeText(mediaURL);
   const cleanThumbnailURL = normalizeText(thumbnailURL);
   const cleanCaption = normalizeText(caption);
+  const cleanTitle = normalizeText(metadata.title);
+  const cleanLocation = normalizeText(metadata.location);
+  const visibility = normalizeText(metadata.visibility) || "everyone";
   const validationError = validatePostPayload(cleanUserId, type, cleanMediaURL);
 
   if (validationError) {
@@ -81,8 +85,13 @@ export async function createPost(
     type,
     mediaURL: cleanMediaURL,
     thumbnailURL: cleanThumbnailURL,
+    title: cleanTitle,
     caption: cleanCaption,
     captionLower: cleanCaption.toLowerCase(),
+    location: cleanLocation,
+    visibility,
+    allowComments: metadata.allowComments !== false,
+    editMeta: metadata.editMeta || {},
     likes: 0,
     commentsCount: 0,
     createdAt: serverTimestamp(),
