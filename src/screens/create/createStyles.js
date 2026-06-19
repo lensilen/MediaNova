@@ -17,7 +17,7 @@ export const createStyles = StyleSheet.create({
     minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
   },
   iconButton: {
     width: 38,
@@ -43,7 +43,7 @@ export const createStyles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "900",
   },
   subtitle: {

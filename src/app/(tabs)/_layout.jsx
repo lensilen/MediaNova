@@ -59,7 +59,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="add"
         options={{
-          title: "Add",
+          title: "Create",
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons
               color={color}

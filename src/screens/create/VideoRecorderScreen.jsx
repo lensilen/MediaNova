@@ -1,21 +1,17 @@
-import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Pressable, SafeAreaView, Text, View } from "react-native";
+import { Alert, SafeAreaView, Text, View } from "react-native";
 
-import { colors } from "../../constants/theme";
 import { flashModes, noFilter } from "./createOptions";
 import { AudioCapturePanel } from "./AudioCapturePanel";
 import { CameraPermissionPanel } from "./CameraPermissionPanel";
 import { CreateCameraShell } from "./CreateCameraShell";
 import { createStyles as styles } from "./createStyles";
 import { useMediaPermissions } from "./useMediaPermissions";
-
-const getNextRoute = (type) => type === "audio" ? "/audio-editor" : type === "photo" ? "/photo-editor" : "/video-editor";
 
 export function VideoRecorderScreen({ initialMode = "video" }) {
   const router = useRouter();
@@ -43,6 +39,19 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     requestMicPermission,
   });
 
+  const openCapturePreview = useCallback((media) => {
+    if (!media?.uri) return;
+
+    router.push({
+      pathname: "/capture-preview",
+      params: {
+        filter: selectedFilter.key,
+        mediaType: media.type,
+        uri: media.uri,
+      },
+    });
+  }, [router, selectedFilter.key]);
+
   useEffect(() => {
     if (!isRecording || videoPaused) return undefined;
 
@@ -62,13 +71,15 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       });
 
       if (photo?.uri) {
-        setPendingMedia({ type: "photo", uri: photo.uri });
+        const media = { type: "photo", uri: photo.uri };
+        setPendingMedia(media);
+        openCapturePreview(media);
         Haptics.selectionAsync();
       }
     } catch {
       Alert.alert("Kamera belum siap", "Coba ambil foto sekali lagi.");
     }
-  }, [cameraReady, ensureCameraPermission]);
+  }, [cameraReady, ensureCameraPermission, openCapturePreview]);
 
   const startVideoRecording = useCallback(async () => {
     if (!(await ensureVideoPermission()) || !cameraReady) return;
@@ -80,7 +91,9 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       const video = await cameraRef.current?.recordAsync({ maxDuration: 60 });
 
       if (video?.uri) {
-        setPendingMedia({ type: "video", uri: video.uri });
+        const media = { type: "video", uri: video.uri };
+        setPendingMedia(media);
+        openCapturePreview(media);
       }
     } catch {
       Alert.alert("Rekam video gagal", "Pastikan izin kamera dan mikrofon aktif.");
@@ -88,7 +101,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       setIsRecording(false);
       setVideoPaused(false);
     }
-  }, [cameraReady, ensureVideoPermission]);
+  }, [cameraReady, ensureVideoPermission, openCapturePreview]);
 
   useEffect(() => {
     if (!countdown) return undefined;
@@ -128,7 +141,9 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     if (recorderState.isRecording) {
       await recorder.stop();
       await setAudioModeAsync({ allowsRecording: false });
-      setPendingMedia({ type: "audio", uri: recorder.uri || recorderState.url });
+      const media = { type: "audio", uri: recorder.uri || recorderState.url };
+      setPendingMedia(media);
+      openCapturePreview(media);
       return;
     }
 
@@ -159,7 +174,9 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     });
 
     if (!result.canceled && result.assets?.[0]?.uri) {
-      setPendingMedia({ type: mode, uri: result.assets[0].uri });
+      const media = { type: mode, uri: result.assets[0].uri };
+      setPendingMedia(media);
+      openCapturePreview(media);
     }
   }
 
@@ -219,22 +236,6 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     }
   }
 
-  function goNext() {
-    if (!pendingMedia?.uri) {
-      Alert.alert("Media belum ada", "Ambil atau pilih media dulu sebelum lanjut.");
-      return;
-    }
-
-    router.push({
-      pathname: getNextRoute(pendingMedia.type),
-      params: {
-        filter: selectedFilter.key,
-        type: pendingMedia.type,
-        uri: pendingMedia.uri,
-      },
-    });
-  }
-
   function renderCameraContent() {
     if (mode === "audio") {
       return (
@@ -268,13 +269,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable style={styles.iconButton} onPress={() => router.back()}>
-            <Ionicons name="close" size={19} color={colors.text} />
-          </Pressable>
-          <Text style={styles.subtitle}>Create media</Text>
-          <Pressable style={styles.nextButton} onPress={goNext}>
-            <Text style={styles.nextText}>Next</Text>
-          </Pressable>
+          <Text style={styles.title}>Create Media</Text>
         </View>
 
         <CreateCameraShell
