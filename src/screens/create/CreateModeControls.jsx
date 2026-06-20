@@ -2,7 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 
 import { colors } from "../../constants/theme";
-import { filters, mediaModes } from "./createOptions";
+import {
+  filters,
+  mediaModes,
+  noSticker,
+  stickerOptions,
+} from "./createOptions";
 import { createStyles as styles } from "./createStyles";
 
 export function CreateModeControls({
@@ -14,8 +19,10 @@ export function CreateModeControls({
   onModeChange,
   onPauseVideo,
   onResetFilter,
+  onStickerSelect,
   pendingMedia,
   selectedFilter,
+  selectedSticker,
   showFilters,
   videoPaused,
 }) {
@@ -51,6 +58,38 @@ export function CreateModeControls({
                 ]}
               >
                 {filter.label}
+              </Text>
+            </Pressable>
+          ))}
+          {[noSticker, ...stickerOptions].map((sticker) => (
+            <Pressable
+              key={sticker.key}
+              onPress={() => onStickerSelect(sticker)}
+              style={[
+                styles.stickerChip,
+                selectedSticker.key === sticker.key
+                  ? styles.filterChipActive
+                  : null,
+              ]}
+            >
+              {sticker.source ? (
+                <Image
+                  resizeMode="contain"
+                  source={sticker.source}
+                  style={styles.stickerPreview}
+                />
+              ) : (
+                <Ionicons name="close" size={22} color={colors.primary} />
+              )}
+              <Text
+                style={[
+                  styles.filterLabel,
+                  selectedSticker.key === sticker.key
+                    ? styles.filterLabelActive
+                    : null,
+                ]}
+              >
+                {sticker.label}
               </Text>
             </Pressable>
           ))}

@@ -56,6 +56,7 @@ export function PreviewScreen() {
       overlayText: readParam(params.overlayText),
       saturation: readParam(params.saturation),
       speed: readParam(params.speed, "1"),
+      sticker: readParam(params.sticker, "none"),
       trimEnd: readParam(params.trimEnd),
       trimStart: readParam(params.trimStart),
       volume: readParam(params.volume, "1"),

@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 
-import { formatTime, noFilter } from "./createOptions";
+import { StickerOverlay } from "../../components/editor/StickerOverlay";
+import { formatTime, noFilter, noSticker } from "./createOptions";
 import { CreateModeControls } from "./CreateModeControls";
 import { CreateToolOverlay } from "./CreateToolOverlay";
 import { createStyles as styles } from "./createStyles";
@@ -17,11 +18,13 @@ export function CreateCameraShell({
   onModeChange,
   onPauseVideo,
   onResetFilter,
+  onStickerSelect,
   onToolPress,
   pendingMedia,
   recordSeconds,
   renderCameraContent,
   selectedFilter,
+  selectedSticker,
   showFilters,
   timerSeconds,
   videoPaused,
@@ -30,6 +33,7 @@ export function CreateCameraShell({
     ...(timerSeconds > 0 ? ["timer"] : []),
     ...(flashMode !== "off" ? ["flash"] : []),
     ...(selectedFilter.key !== noFilter.key ? ["filter"] : []),
+    ...(selectedSticker.key !== noSticker.key ? ["sticker"] : []),
   ];
 
   return (
@@ -40,6 +44,9 @@ export function CreateCameraShell({
           pointerEvents="none"
           style={[styles.filterTint, { backgroundColor: selectedFilter.tint }]}
         />
+      ) : null}
+      {mode !== "audio" ? (
+        <StickerOverlay sticker={selectedSticker || noSticker} />
       ) : null}
       {countdown ? (
         <View pointerEvents="none" style={styles.countdownOverlay}>
@@ -67,8 +74,10 @@ export function CreateCameraShell({
         onModeChange={onModeChange}
         onPauseVideo={onPauseVideo}
         onResetFilter={onResetFilter}
+        onStickerSelect={onStickerSelect}
         pendingMedia={pendingMedia}
         selectedFilter={selectedFilter || noFilter}
+        selectedSticker={selectedSticker || noSticker}
         showFilters={showFilters}
         videoPaused={videoPaused}
       />

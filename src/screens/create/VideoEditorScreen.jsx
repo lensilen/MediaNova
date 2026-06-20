@@ -6,8 +6,15 @@ import { useMemo, useState } from "react";
 import { SafeAreaView, Text, TextInput, View } from "react-native";
 
 import { FilterStrip } from "../../components/editor/FilterStrip";
+import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { colors } from "../../constants/theme";
-import { filters, noFilter, videoTools } from "./createOptions";
+import {
+  filters,
+  noFilter,
+  noSticker,
+  stickerOptions,
+  videoTools,
+} from "./createOptions";
 import { EditorHeader } from "./EditorHeader";
 import { EditorToolBar } from "./EditorToolBar";
 import { TimelineStrip } from "./TimelineStrip";
@@ -15,6 +22,10 @@ import { editorStyles as styles } from "./editorStyles";
 
 function getFilterByKey(key) {
   return filters.find((filter) => filter.key === key) || noFilter;
+}
+
+function getStickerByKey(key) {
+  return stickerOptions.find((sticker) => sticker.key === key) || noSticker;
 }
 
 export function VideoEditorScreen() {
@@ -29,7 +40,11 @@ export function VideoEditorScreen() {
   const [trimEnd, setTrimEnd] = useState(60);
   const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
+  const [brightness, setBrightness] = useState(0);
+  const [contrast, setContrast] = useState(0);
+  const [saturation, setSaturation] = useState(0);
   const [overlayText, setOverlayText] = useState("");
+  const [selectedSticker] = useState(getStickerByKey(params.sticker));
 
   const videoSource = useMemo(() => (uri ? { uri } : null), [uri]);
   const player = useVideoPlayer(videoSource, (nextPlayer) => {
@@ -42,9 +57,14 @@ export function VideoEditorScreen() {
       pathname: "/preview",
       params: {
         filter: selectedFilter.key,
+        brightness: String(brightness),
+        contrast: String(contrast),
+        hasSticker: selectedSticker.key !== noSticker.key ? "true" : "false",
         mediaType: "video",
         overlayText,
+        saturation: String(saturation),
         speed: String(speed),
+        sticker: selectedSticker.key,
         trimEnd: String(trimEnd),
         trimStart: String(trimStart),
         uri,
@@ -77,8 +97,15 @@ export function VideoEditorScreen() {
         />
         <View
           pointerEvents="none"
-          style={[styles.filterTint, { backgroundColor: selectedFilter.tint }]}
+          style={[
+            styles.filterTint,
+            {
+              backgroundColor: selectedFilter.tint,
+              opacity: 1 + brightness * 0.12 + saturation * 0.06,
+            },
+          ]}
         />
+        <StickerOverlay sticker={selectedSticker} />
         {overlayText ? (
           <Text numberOfLines={3} style={styles.overlayText}>
             {overlayText}
@@ -143,6 +170,16 @@ export function VideoEditorScreen() {
       );
     }
 
+    if (activeTool === "beauty") {
+      return (
+        <>
+          {renderSlider("Brightness", brightness, setBrightness, -1, 1, 0.05)}
+          {renderSlider("Contrast", contrast, setContrast, -1, 1, 0.05)}
+          {renderSlider("Saturation", saturation, setSaturation, -1, 1, 0.05)}
+        </>
+      );
+    }
+
     return (
       <>
         <Text style={styles.sliderLabel}>
@@ -165,6 +202,25 @@ export function VideoEditorScreen() {
           value={trimEnd}
           onValueChange={setTrimEnd}
           minimumTrackTintColor={colors.secondary}
+          maximumTrackTintColor={colors.border}
+        />
+      </>
+    );
+  }
+
+  function renderSlider(label, value, onChange, min, max, step) {
+    return (
+      <>
+        <Text style={styles.sliderLabel}>
+          {label} {Math.round(value * 100)}
+        </Text>
+        <Slider
+          minimumValue={min}
+          maximumValue={max}
+          step={step}
+          value={value}
+          onValueChange={onChange}
+          minimumTrackTintColor={colors.primary}
           maximumTrackTintColor={colors.border}
         />
       </>

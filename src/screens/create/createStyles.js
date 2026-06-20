@@ -250,6 +250,22 @@ export const createStyles = StyleSheet.create({
     backgroundColor: "rgba(245,239,235,0.78)",
     padding: 7,
   },
+  stickerChip: {
+    width: 74,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.42)",
+    backgroundColor: "rgba(245,239,235,0.78)",
+    padding: 7,
+  },
+  stickerPreview: {
+    width: 42,
+    height: 34,
+    marginBottom: 5,
+  },
   filterChipActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primary,

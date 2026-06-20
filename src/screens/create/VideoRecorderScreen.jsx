@@ -6,7 +6,7 @@ import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, SafeAreaView, Text, View } from "react-native";
 
-import { flashModes, noFilter } from "./createOptions";
+import { flashModes, noFilter, noSticker } from "./createOptions";
 import { AudioCapturePanel } from "./AudioCapturePanel";
 import { CameraPermissionPanel } from "./CameraPermissionPanel";
 import { CreateCameraShell } from "./CreateCameraShell";
@@ -23,6 +23,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
   const [mode, setMode] = useState(initialMode);
   const [facing, setFacing] = useState("back");
   const [selectedFilter, setSelectedFilter] = useState(noFilter);
+  const [selectedSticker, setSelectedSticker] = useState(noSticker);
   const [flashMode, setFlashMode] = useState("off");
   const [pendingMedia, setPendingMedia] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -47,10 +48,11 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
       params: {
         filter: selectedFilter.key,
         mediaType: media.type,
+        sticker: selectedSticker.key,
         uri: media.uri,
       },
     });
-  }, [router, selectedFilter.key]);
+  }, [router, selectedFilter.key, selectedSticker.key]);
 
   useEffect(() => {
     if (!isRecording || videoPaused) return undefined;
@@ -233,6 +235,11 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
 
     if (toolKey === "filter") {
       setShowFilters((visible) => !visible);
+      return;
+    }
+
+    if (toolKey === "sticker") {
+      setShowFilters((visible) => !visible);
     }
   }
 
@@ -281,12 +288,22 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
           onLibraryPress={pickFromLibrary}
           onModeChange={setMode}
           onPauseVideo={toggleVideoPause}
-          onResetFilter={() => setSelectedFilter(noFilter)}
+          onResetFilter={() => {
+            setSelectedFilter(noFilter);
+            setSelectedSticker(noSticker);
+          }}
+          onStickerSelect={(sticker) =>
+            setSelectedSticker(
+              selectedSticker.key === sticker.key ? noSticker : sticker,
+            )
+          }
           onToolPress={handleToolPress}
           pendingMedia={pendingMedia}
           recordSeconds={recordSeconds}
           renderCameraContent={renderCameraContent}
-          selectedFilter={selectedFilter} showFilters={showFilters}
+          selectedFilter={selectedFilter}
+          selectedSticker={selectedSticker}
+          showFilters={showFilters}
           timerSeconds={timerSeconds} videoPaused={videoPaused}
         />
       </View>

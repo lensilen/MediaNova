@@ -5,8 +5,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
 import { Image, Pressable, SafeAreaView, Text, View } from "react-native";
 
+import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { colors } from "../../constants/theme";
-import { waveformBars } from "./createOptions";
+import { noSticker, stickerOptions, waveformBars } from "./createOptions";
 import { capturePreviewStyles as styles } from "./capturePreviewStyles";
 
 function readParam(value, fallback = "") {
@@ -20,12 +21,18 @@ function getEditorRoute(mediaType) {
   return "/video-editor";
 }
 
+function getStickerByKey(key) {
+  return stickerOptions.find((item) => item.key === key) || noSticker;
+}
+
 export function CapturePreviewScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const uri = readParam(params.uri);
   const mediaType = readParam(params.mediaType, "video");
   const filter = readParam(params.filter, "none");
+  const sticker = readParam(params.sticker, "none");
+  const selectedSticker = getStickerByKey(sticker);
   const videoSource = useMemo(() => mediaType === "video" && uri ? { uri } : null, [mediaType, uri]);
   const audioSource = useMemo(() => mediaType === "audio" && uri ? { uri } : null, [mediaType, uri]);
   const videoPlayer = useVideoPlayer(videoSource, (player) => { player.loop = true; player.play(); });
@@ -35,7 +42,7 @@ export function CapturePreviewScreen() {
   function goNext() {
     router.push({
       pathname: getEditorRoute(mediaType),
-      params: { filter, mediaType, uri },
+      params: { filter, mediaType, sticker, uri },
     });
   }
 
@@ -46,7 +53,12 @@ export function CapturePreviewScreen() {
 
   function renderPreview() {
     if (mediaType === "photo") {
-      return <Image source={{ uri }} resizeMode="cover" style={styles.media} />;
+      return (
+        <>
+          <Image source={{ uri }} resizeMode="cover" style={styles.media} />
+          <StickerOverlay sticker={selectedSticker} />
+        </>
+      );
     }
 
     if (mediaType === "audio") {
@@ -64,7 +76,12 @@ export function CapturePreviewScreen() {
       );
     }
 
-    return <VideoView contentFit="cover" nativeControls player={videoPlayer} style={styles.media} />;
+    return (
+      <>
+        <VideoView contentFit="cover" nativeControls player={videoPlayer} style={styles.media} />
+        <StickerOverlay sticker={selectedSticker} />
+      </>
+    );
   }
 
   return (

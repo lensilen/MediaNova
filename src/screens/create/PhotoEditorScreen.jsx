@@ -31,6 +31,10 @@ function getFilterByKey(key) {
   return filters.find((filter) => filter.key === key) || noFilter;
 }
 
+function getStickerByKey(key) {
+  return stickerOptions.find((sticker) => sticker.key === key) || noSticker;
+}
+
 export function PhotoEditorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -39,7 +43,9 @@ export function PhotoEditorScreen() {
   const [selectedFilter, setSelectedFilter] = useState(
     getFilterByKey(params.filter),
   );
-  const [selectedSticker, setSelectedSticker] = useState(noSticker);
+  const [selectedSticker, setSelectedSticker] = useState(
+    getStickerByKey(params.sticker),
+  );
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
   const [saturation, setSaturation] = useState(0);

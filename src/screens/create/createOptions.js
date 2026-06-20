@@ -50,7 +50,7 @@ export const cameraTools = [
   { key: "timer", label: "Timer", icon: "timer-outline" },
   { key: "flash", label: "Flash", icon: "flash-outline" },
   { key: "filter", label: "Filter", icon: "color-filter-outline" },
-  { key: "beauty", label: "Adjust", icon: "sparkles-outline" },
+  { key: "sticker", label: "Sticker", icon: "happy-outline" },
   { key: "grid", label: "Grid", icon: "grid-outline" },
 ];
 
@@ -61,6 +61,7 @@ export const videoTools = [
   { key: "split", label: "Split", icon: "git-branch-outline" },
   { key: "volume", label: "Volume", icon: "volume-medium-outline" },
   { key: "speed", label: "Speed", icon: "speedometer-outline" },
+  { key: "beauty", label: "Beauty", icon: "sparkles-outline" },
   { key: "text", label: "Text", icon: "text-outline" },
   { key: "filters", label: "Filter", icon: "color-filter-outline" },
 ];
