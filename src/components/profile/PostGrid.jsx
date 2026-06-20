@@ -1,48 +1,87 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { colors as fallbackColors } from '../../constants/theme';
+import { colors as fallbackColors } from "../../constants/theme";
 
 function getPreviewSource(post) {
-  const uri = post?.thumbnailURL || (post?.type === 'photo' ? post?.mediaURL : '');
+  if (!post) return null;
+
+  const uri =
+    post.thumbnailURL ||
+    post.photoURL ||
+    (post.type === "photo"
+      ? post.mediaURL
+      : "");
+
   return uri ? { uri } : null;
 }
 
 function getIconName(type) {
-  if (type === 'audio') {
-    return 'musical-notes';
-  }
+  switch (type) {
+    case "video":
+      return "play";
 
-  if (type === 'video') {
-    return 'play';
-  }
+    case "audio":
+      return "musical-notes";
 
-  return 'image';
+    default:
+      return "image";
+  }
 }
 
 export function PostGrid({
   colors = fallbackColors,
   isLoading = false,
-  onPostPress,
   posts = [],
+  onPostPress,
 }) {
   if (isLoading) {
     return (
       <View style={styles.emptyState}>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>Memuat post</Text>
-        <Text style={[styles.emptyText, { color: colors.muted }]}>
-          Konten profil sedang diambil dari Firebase.
+        <Text
+          style={[
+            styles.emptyTitle,
+            { color: colors.text },
+          ]}
+        >
+          Memuat post...
         </Text>
       </View>
     );
   }
 
-  if (!posts.length) {
+  if (!posts?.length) {
     return (
       <View style={styles.emptyState}>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>Belum ada post</Text>
-        <Text style={[styles.emptyText, { color: colors.muted }]}>
-          Foto, video, dan audio yang diposting user akan muncul di sini.
+        <Ionicons
+          name="images-outline"
+          size={50}
+          color={colors.muted}
+        />
+
+        <Text
+          style={[
+            styles.emptyTitle,
+            { color: colors.text },
+          ]}
+        >
+          Belum ada post
+        </Text>
+
+        <Text
+          style={[
+            styles.emptyText,
+            { color: colors.muted },
+          ]}
+        >
+          Post yang dibuat atau
+          disimpan akan muncul di sini.
         </Text>
       </View>
     );
@@ -51,28 +90,72 @@ export function PostGrid({
   return (
     <View style={styles.grid}>
       {posts.map((post) => {
-        const source = getPreviewSource(post);
+        const source =
+          getPreviewSource(post);
 
         return (
           <Pressable
             key={post.id}
-            onPress={() => onPostPress?.(post)}
-            style={[styles.tile, { backgroundColor: colors.surface }]}>
+            onPress={() =>
+              onPostPress?.(post)
+            }
+            style={[
+              styles.tile,
+              {
+                backgroundColor:
+                  colors.surface,
+              },
+            ]}
+          >
             {source ? (
-              <Image source={source} style={styles.image} />
+              <Image
+                source={source}
+                style={styles.image}
+              />
             ) : (
-              <View style={[styles.fallback, { borderColor: colors.border }]}>
-                <Ionicons name={getIconName(post.type)} size={24} color={colors.secondary} />
+              <View
+                style={[
+                  styles.fallback,
+                  {
+                    borderColor:
+                      colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={getIconName(
+                    post.type
+                  )}
+                  size={26}
+                  color={
+                    colors.secondary
+                  }
+                />
+
                 <Text
                   numberOfLines={2}
-                  style={[styles.caption, { color: colors.text }]}>
-                  {post.caption || post.type || 'Post'}
+                  style={[
+                    styles.caption,
+                    {
+                      color:
+                        colors.text,
+                    },
+                  ]}
+                >
+                  {post.caption ||
+                    "MediaNova"}
                 </Text>
               </View>
             )}
 
-            <View style={styles.typeBadge}>
-              <Ionicons name={getIconName(post.type)} size={12} color="#FFFFFF" />
+            <View style={styles.badge}>
+              <Ionicons
+                name={getIconName(
+                  post.type
+                )}
+                size={12}
+                color="#FFF"
+              />
             </View>
           </Pressable>
         );
@@ -83,58 +166,68 @@ export function PostGrid({
 
 const styles = StyleSheet.create({
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
+
   tile: {
-    width: '31.8%',
+    width: "31.8%",
     aspectRatio: 1,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
+
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
+
   fallback: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
     padding: 8,
     gap: 6,
   },
+
   caption: {
     fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
+    textAlign: "center",
+    fontWeight: "700",
   },
-  typeBadge: {
-    position: 'absolute',
+
+  badge: {
+    position: "absolute",
     top: 6,
     right: 6,
     width: 22,
     height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderRadius: 11,
-    backgroundColor: 'rgba(15, 10, 20, 0.72)',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor:
+      "rgba(0,0,0,0.65)",
   },
+
   emptyState: {
-    minHeight: 170,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 220,
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
+
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
+    marginTop: 12,
     marginBottom: 8,
   },
+
   emptyText: {
+    textAlign: "center",
     fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
+    lineHeight: 20,
   },
 });
