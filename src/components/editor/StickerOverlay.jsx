@@ -1,8 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet } from "react-native";
 import { useState } from "react";
 
 import { colors } from "../../constants/theme";
+import { noSticker } from "../../screens/create/createOptions";
 
 const positions = [
   { top: 80, left: 32 },
@@ -11,10 +11,10 @@ const positions = [
   { bottom: 122, right: 48 },
 ];
 
-export function StickerOverlay({ enabled = false, icon = "sparkles" }) {
+export function StickerOverlay({ sticker = noSticker }) {
   const [positionIndex, setPositionIndex] = useState(0);
 
-  if (!enabled) {
+  if (!sticker?.source) {
     return null;
   }
 
@@ -23,9 +23,7 @@ export function StickerOverlay({ enabled = false, icon = "sparkles" }) {
       onPress={() => setPositionIndex((index) => (index + 1) % positions.length)}
       style={[styles.sticker, positions[positionIndex]]}
     >
-      <View style={styles.badge}>
-        <Ionicons name={icon} size={24} color={colors.onPrimary} />
-      </View>
+      <Image resizeMode="contain" source={sticker.source} style={styles.image} />
     </Pressable>
   );
 }
@@ -34,14 +32,13 @@ const styles = StyleSheet.create({
   sticker: {
     position: "absolute",
   },
-  badge: {
-    width: 54,
-    height: 54,
+  image: {
+    width: 112,
+    height: 84,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 27,
-    backgroundColor: colors.secondary,
-    borderWidth: 2,
-    borderColor: colors.tertiary,
+    shadowColor: colors.text,
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
   },
 });

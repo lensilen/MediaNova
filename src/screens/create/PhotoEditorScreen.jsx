@@ -2,12 +2,26 @@ import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, SafeAreaView, Text, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 import { FilterStrip } from "../../components/editor/FilterStrip";
 import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { colors } from "../../constants/theme";
-import { filters, noFilter, photoTools } from "./createOptions";
+import {
+  filters,
+  noFilter,
+  noSticker,
+  photoTools,
+  stickerOptions,
+} from "./createOptions";
 import { EditorHeader } from "./EditorHeader";
 import { EditorToolBar } from "./EditorToolBar";
 import { editorStyles as styles } from "./editorStyles";
@@ -25,7 +39,7 @@ export function PhotoEditorScreen() {
   const [selectedFilter, setSelectedFilter] = useState(
     getFilterByKey(params.filter),
   );
-  const [stickerEnabled, setStickerEnabled] = useState(false);
+  const [selectedSticker, setSelectedSticker] = useState(noSticker);
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
   const [saturation, setSaturation] = useState(0);
@@ -45,9 +59,10 @@ export function PhotoEditorScreen() {
           brightness: String(brightness),
           contrast: String(contrast),
           filter: selectedFilter.key,
-          hasSticker: stickerEnabled ? "true" : "false",
+          hasSticker: selectedSticker.key !== noSticker.key ? "true" : "false",
           mediaType: "photo",
           saturation: String(saturation),
+          sticker: selectedSticker.key,
           uri: outputUri,
         },
       });
@@ -84,7 +99,7 @@ export function PhotoEditorScreen() {
             },
           ]}
         />
-        <StickerOverlay enabled={stickerEnabled} />
+        <StickerOverlay sticker={selectedSticker} />
       </>
     );
   }
@@ -120,20 +135,44 @@ export function PhotoEditorScreen() {
 
     if (activeTool === "sticker") {
       return (
-        <>
-          <Text style={styles.sliderLabel}>
-            Sticker {stickerEnabled ? "aktif" : "nonaktif"}
-          </Text>
-          <Slider
-            minimumValue={0}
-            maximumValue={1}
-            step={1}
-            value={stickerEnabled ? 1 : 0}
-            onValueChange={(value) => setStickerEnabled(Boolean(value))}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={colors.border}
-          />
-        </>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.stickerRow}
+        >
+          {[noSticker, ...stickerOptions].map((sticker) => (
+            <Pressable
+              key={sticker.key}
+              onPress={() => setSelectedSticker(sticker)}
+              style={[
+                styles.stickerOption,
+                selectedSticker.key === sticker.key
+                  ? styles.stickerOptionActive
+                  : null,
+              ]}
+            >
+              {sticker.source ? (
+                <Image
+                  resizeMode="contain"
+                  source={sticker.source}
+                  style={styles.stickerOptionImage}
+                />
+              ) : (
+                <Ionicons name="close" size={22} color={colors.primary} />
+              )}
+              <Text
+                style={[
+                  styles.stickerOptionText,
+                  selectedSticker.key === sticker.key
+                    ? styles.stickerOptionTextActive
+                    : null,
+                ]}
+              >
+                {sticker.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       );
     }
 

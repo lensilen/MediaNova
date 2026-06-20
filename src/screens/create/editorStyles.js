@@ -160,6 +160,38 @@ export const editorStyles = StyleSheet.create({
     fontWeight: "800",
     marginBottom: 6,
   },
+  stickerRow: {
+    gap: 10,
+    paddingVertical: 4,
+  },
+  stickerOption: {
+    width: 76,
+    minHeight: 82,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    padding: 8,
+  },
+  stickerOptionActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.tertiary,
+  },
+  stickerOptionImage: {
+    width: 52,
+    height: 42,
+    marginBottom: 6,
+  },
+  stickerOptionText: {
+    color: colors.text,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  stickerOptionTextActive: {
+    color: colors.primary,
+  },
   textInput: {
     minHeight: 44,
     borderWidth: 1,
