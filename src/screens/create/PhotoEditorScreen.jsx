@@ -51,7 +51,11 @@ export function PhotoEditorScreen() {
     setIsProcessing(true);
 
     try {
-      const outputUri = await applyPhotoFilter(uri, selectedFilter.key);
+      const outputUri = await applyPhotoFilter(uri, selectedFilter.key, {
+        brightness,
+        contrast,
+        saturation,
+      });
 
       router.push({
         pathname: "/preview",
@@ -176,15 +180,17 @@ export function PhotoEditorScreen() {
       );
     }
 
-    if (activeTool === "brightness") {
-      return renderSlider("Brightness", brightness, setBrightness);
+    if (activeTool === "beauty") {
+      return (
+        <>
+          {renderSlider("Brightness", brightness, setBrightness)}
+          {renderSlider("Contrast", contrast, setContrast)}
+          {renderSlider("Saturation", saturation, setSaturation)}
+        </>
+      );
     }
 
-    if (activeTool === "contrast") {
-      return renderSlider("Contrast", contrast, setContrast);
-    }
-
-    return renderSlider("Saturation", saturation, setSaturation);
+    return null;
   }
 
   return (

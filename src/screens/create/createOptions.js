@@ -75,9 +75,7 @@ export const audioTools = [
 export const photoTools = [
   { key: "filters", label: "Filter", icon: "color-filter-outline" },
   { key: "sticker", label: "Sticker", icon: "happy-outline" },
-  { key: "brightness", label: "Bright", icon: "sunny-outline" },
-  { key: "contrast", label: "Contrast", icon: "contrast-outline" },
-  { key: "saturation", label: "Color", icon: "water-outline" },
+  { key: "beauty", label: "Beauty", icon: "sparkles-outline" },
 ];
 
 export const waveformBars = [

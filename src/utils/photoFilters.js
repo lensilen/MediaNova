@@ -61,14 +61,44 @@ function applyPixelFilter(data, filterKey) {
   }
 }
 
-export async function applyPhotoFilter(uri, filterKey = "none") {
+function hasBeautyAdjustments(adjustments = {}) {
+  return ["brightness", "contrast", "saturation"].some((key) => {
+    return Math.abs(Number(adjustments[key] || 0)) > 0.01;
+  });
+}
+
+function applyBeautyAdjustments(data, adjustments = {}) {
+  const brightness = Number(adjustments.brightness || 0) * 60;
+  const contrast = 1 + Number(adjustments.contrast || 0);
+  const saturation = 1 + Number(adjustments.saturation || 0);
+
+  for (let index = 0; index < data.length; index += 4) {
+    let red = (data[index] - 128) * contrast + 128 + brightness;
+    let green = (data[index + 1] - 128) * contrast + 128 + brightness;
+    let blue = (data[index + 2] - 128) * contrast + 128 + brightness;
+    const gray = red * 0.299 + green * 0.587 + blue * 0.114;
+
+    red = gray + (red - gray) * saturation;
+    green = gray + (green - gray) * saturation;
+    blue = gray + (blue - gray) * saturation;
+
+    data[index] = clamp(red);
+    data[index + 1] = clamp(green);
+    data[index + 2] = clamp(blue);
+  }
+}
+
+export async function applyPhotoFilter(uri, filterKey = "none", adjustments = {}) {
   const normalized = await manipulateAsync(
     uri,
     [{ resize: { width: 1280 } }],
     { base64: true, compress: 0.92, format: SaveFormat.JPEG },
   );
 
-  if (!COLOR_FILTERS.includes(filterKey) || !normalized.base64) {
+  const hasColorFilter = COLOR_FILTERS.includes(filterKey);
+  const hasBeauty = hasBeautyAdjustments(adjustments);
+
+  if ((!hasColorFilter && !hasBeauty) || !normalized.base64) {
     return normalized.uri;
   }
 
@@ -76,13 +106,19 @@ export async function applyPhotoFilter(uri, filterKey = "none") {
     useTArray: true,
   });
 
-  applyPixelFilter(decoded.data, filterKey);
+  if (hasColorFilter) {
+    applyPixelFilter(decoded.data, filterKey);
+  }
+
+  if (hasBeauty) {
+    applyBeautyAdjustments(decoded.data, adjustments);
+  }
 
   const encoded = jpeg.encode(
     { data: decoded.data, height: decoded.height, width: decoded.width },
     90,
   );
-  const outputUri = `${FileSystem.cacheDirectory}medianova-${filterKey}-${Date.now()}.jpg`;
+  const outputUri = `${FileSystem.cacheDirectory}medianova-${filterKey}-beauty-${Date.now()}.jpg`;
 
   await FileSystem.writeAsStringAsync(outputUri, bytesToBase64(encoded.data), {
     encoding: FileSystem.EncodingType.Base64,

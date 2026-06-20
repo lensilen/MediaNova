@@ -14,6 +14,12 @@ function readParam(value, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
+function getEditorRoute(mediaType) {
+  if (mediaType === "photo") return "/photo-editor";
+  if (mediaType === "audio") return "/audio-editor";
+  return "/video-editor";
+}
+
 export function CapturePreviewScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
@@ -27,7 +33,10 @@ export function CapturePreviewScreen() {
   const audioStatus = useAudioPlayerStatus(audioPlayer);
 
   function goNext() {
-    router.push({ pathname: "/preview", params: { filter, mediaType, uri } });
+    router.push({
+      pathname: getEditorRoute(mediaType),
+      params: { filter, mediaType, uri },
+    });
   }
 
   function toggleAudio() {

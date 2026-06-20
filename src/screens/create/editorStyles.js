@@ -121,7 +121,7 @@ export const editorStyles = StyleSheet.create({
     fontWeight: "700",
   },
   panel: {
-    minHeight: 124,
+    minHeight: 154,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     marginTop: 18,
