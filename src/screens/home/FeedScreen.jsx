@@ -1,99 +1,136 @@
-import { useEffect } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
-  RefreshControl,
   StyleSheet,
-  Text,
   View,
+  ActivityIndicator,
+  Text,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
+import { VideoCard } from "../../components/home/VideoCard";
 import { colors } from "../../constants/theme";
-import { useAuth } from "../../hooks/useAuth";
-import { useFeed } from "../../hooks/useFeed";
 
-function getCreatedAtLabel(createdAt) {
-  if (!createdAt) {
-    return "";
-  }
+const dummyVideos = [
+  {
+    id: "1",
+    type: "video",
+    username: "student_creator",
+    photoURL: "https://i.pravatar.cc/150?img=1",
+    caption: "Exploring the new library! #campuslife",
+    mediaURL:
+      "https://www.w3schools.com/html/mov_bbb.mp4",
+    likes: 12400,
+    comments: 342,
+    saves: 89,
+    currentTime: "1:04",
+    duration: "3:42",
+  },
 
-  if (typeof createdAt.toDate === "function") {
-    return createdAt.toDate().toLocaleDateString("id-ID");
-  }
+];
 
-  return "";
-}
+export default function FeedScreen() {
+  const [activeId, setActiveId] = useState(
+    dummyVideos[0].id
+  );
 
-export function FeedScreen() {
-  const { isAuthenticated } = useAuth();
-  const { error, hasMore, isLoading, isRefreshing, loadFeed, loadMore, posts } =
-    useFeed();
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 80,
+  }).current;
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadFeed({ refresh: true });
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }) => {
+      if (
+        viewableItems &&
+        viewableItems.length > 0
+      ) {
+        setActiveId(
+          viewableItems[0].item.id
+        );
+      }
     }
-  }, [isAuthenticated, loadFeed]);
+  ).current;
 
-  function renderPost({ item }) {
+  const renderItem = useCallback(
+    ({ item }) => (
+      <VideoCard
+        post={item}
+        isActive={activeId === item.id}
+        onProfilePress={() => {
+          console.log(
+            "Profile:",
+            item.username
+          );
+        }}
+        onLike={() => {
+          console.log("Like:", item.id);
+        }}
+        onComment={() => {
+          console.log(
+            "Comment:",
+            item.id
+          );
+        }}
+        onSave={() => {
+          console.log("Save:", item.id);
+        }}
+        onShare={() => {
+          console.log("Share:", item.id);
+        }}
+      />
+    ),
+    [activeId]
+  );
+
+  if (!dummyVideos.length) {
     return (
-      <View style={styles.postItem}>
-        <View style={styles.postHeader}>
-          <Text style={styles.type}>{item.type}</Text>
-          <Text style={styles.date}>{getCreatedAtLabel(item.createdAt)}</Text>
-        </View>
-        <Text style={styles.caption} numberOfLines={3}>
-          {item.caption || "Tanpa caption"}
-        </Text>
-        <Text style={styles.meta}>
-          {item.likes ?? 0} likes - {item.commentsCount ?? 0} comments
-        </Text>
-      </View>
-    );
-  }
-
-  function renderEmpty() {
-    if (isLoading) {
-      return null;
-    }
-
-    return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Belum ada post</Text>
-        <Text style={styles.emptyText}>
-          Post dari Firebase akan tampil di sini.
-        </Text>
+      <View style={styles.loader}>
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Ionicons
+          name="notifications-outline"
+          size={22}
+          color="#FFFFFF"
+        />
+
+        <Text style={styles.logo}>
+          MediaNova
+        </Text>
+
+        <Ionicons
+          name="search-outline"
+          size={22}
+          color="#FFFFFF"
+        />
+      </View>
+
+      {/* FEED */}
       <FlatList
-        data={posts}
+        data={dummyVideos}
         keyExtractor={(item) => item.id}
-        renderItem={renderPost}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={
-          isLoading && posts.length > 0 ? (
-            <ActivityIndicator color={colors.primary} style={styles.loader} />
-          ) : null
+        renderItem={renderItem}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        onViewableItemsChanged={
+          onViewableItemsChanged
         }
-        onEndReached={() => {
-          if (hasMore) {
-            loadMore();
-          }
-        }}
-        onEndReachedThreshold={0.4}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => loadFeed({ refresh: true })}
-            tintColor={colors.primary}
-          />
+        viewabilityConfig={
+          viewabilityConfig
         }
+        removeClippedSubviews
+        initialNumToRender={2}
+        maxToRenderPerBatch={2}
+        windowSize={3}
       />
     </View>
   );
@@ -102,71 +139,32 @@ export function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor:
+      colors.background,
   },
-  listContent: {
-    flexGrow: 1,
-    padding: 16,
-    paddingTop: 56,
-  },
-  postItem: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.surface,
-    padding: 16,
-    marginBottom: 12,
-  },
-  postHeader: {
+
+  header: {
+    position: "absolute",
+    top: 25,
+    left: 20,
+    right: 20,
+    zIndex: 999,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
   },
-  type: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: "800",
-    textTransform: "uppercase",
-  },
-  date: {
-    color: colors.muted,
-    fontSize: 12,
-  },
-  caption: {
-    color: colors.text,
+
+  logo: {
+    color: "#FFFFFF",
     fontSize: 16,
-    lineHeight: 22,
-    marginBottom: 12,
+    fontWeight: "900",
   },
-  meta: {
-    color: colors.muted,
-    fontSize: 13,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  emptyText: {
-    color: colors.muted,
-    fontSize: 14,
-    textAlign: "center",
-  },
-  error: {
-    color: "#FCA5A5",
-    backgroundColor: "#7F1D1D",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
+
   loader: {
-    marginVertical: 18,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor:
+      colors.background,
   },
 });

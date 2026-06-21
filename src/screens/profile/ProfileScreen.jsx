@@ -16,6 +16,7 @@ import { ConnectionSheet } from '../../components/profile/ConnectionSheet';
 import { PostGrid } from '../../components/profile/PostGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { useSocialStore } from '../../store/useSocialStore';
 import { getUserPosts } from '../../utils/posts';
 import { getFollowers, getFollowing, getUserProfile } from '../../utils/profile';
 import { followUser, isFollowing, unfollowUser } from '../../utils/social';
@@ -37,6 +38,10 @@ export function ProfileScreen() {
   const isOwnProfile = !targetUserId || targetUserId === currentUserId;
   const [profile, setVisibleProfile] = useState(null);
   const [posts, setPosts] = useState([]);
+  
+  // Ekstrak likedPosts di sini agar bisa digunakan di visiblePosts
+  const { savedPosts, likedPosts } = useSocialStore();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFollowed, setIsFollowed] = useState(false);
@@ -57,29 +62,48 @@ export function ProfileScreen() {
 
     return profile || {};
   }, [isOwnProfile, ownProfile, profile]);
+
   const displayName = visibleProfile.displayName || user?.displayName || 'User';
   const photoURL = visibleProfile.photoURL || user?.photoURL || '';
   const bio = visibleProfile.bio || 'Digital creator di MediaNova.';
   const location = visibleProfile.location || 'MediaNova Studio';
+  
   const handle = useMemo(() => {
     const source = visibleProfile.email || displayName;
     return `@${source.split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '')}`;
   }, [displayName, visibleProfile.email]);
+
+  // Bagian yang diperbarui sesuai permintaanmu
   const visiblePosts = useMemo(() => {
-    if (activeTab === 'Video') {
-      return posts.filter((post) => post.type === 'video');
+    if (activeTab === "Video") {
+      return posts.filter(
+        (post) => post.type === "video"
+      );
     }
 
-    if (activeTab === 'Audio') {
-      return posts.filter((post) => post.type === 'audio');
+    if (activeTab === "Audio") {
+      return posts.filter(
+        (post) => post.type === "audio"
+      );
     }
 
-    if (activeTab === 'Saved') {
-      return posts;
+    if (activeTab === "Saved") {
+      return savedPosts;
     }
 
-    return posts.filter((post) => post.type === 'photo');
-  }, [activeTab, posts]);
+    if (activeTab === "Like") {
+      return likedPosts;
+    }
+
+    return posts.filter(
+      (post) => post.type === "photo"
+    );
+  }, [
+    activeTab,
+    posts,
+    savedPosts,
+    likedPosts,
+  ]);
 
   const loadProfile = useCallback(
     async ({ refresh = false } = {}) => {
