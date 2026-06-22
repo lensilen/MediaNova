@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ export function VideoCard({
   onShare,
 }) {
   const router = useRouter(); // 2. Inisialisasi router
+  const wasActiveRef = useRef(false);
 
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -71,7 +72,19 @@ export function VideoCard({
       player.play();
     } else {
       player.pause();
+
+      if (wasActiveRef.current && !isActive) {
+        try {
+          player.replay();
+          player.pause();
+        } catch (_error) {}
+
+        setIsPaused(false);
+        setProgress(0);
+      }
     }
+
+    wasActiveRef.current = isActive;
   }, [player, isActive, isPaused]);
 
   useEffect(() => {

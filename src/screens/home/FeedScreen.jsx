@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -9,6 +9,7 @@ import {
   Text,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, usePathname } from "expo-router";
 
 import { VideoCard } from "../../components/home/VideoCard";
 import { colors } from "../../constants/theme";
@@ -32,6 +33,9 @@ const dummyVideos = [
 ];
 
 export default function FeedScreen() {
+  const listRef = useRef(null);
+  const pathname = usePathname();
+  const isFocused = pathname === "/";
   const [activeId, setActiveId] = useState(
     dummyVideos[0].id
   );
@@ -77,7 +81,7 @@ export default function FeedScreen() {
     ({ item }) => (
       <VideoCard
         post={item}
-        isActive={activeId === item.id}
+        isActive={isFocused && activeId === item.id}
         onProfilePress={() => {
           console.log(
             "Profile:",
@@ -99,7 +103,16 @@ export default function FeedScreen() {
         onShare={handleShare}
       />
     ),
-    [activeId, handleShare]
+    [activeId, handleShare, isFocused]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setActiveId(dummyVideos[0]?.id || "");
+        listRef.current?.scrollToOffset?.({ animated: false, offset: 0 });
+      };
+    }, []),
   );
 
   if (!dummyVideos.length) {
@@ -136,6 +149,7 @@ export default function FeedScreen() {
 
       {/* FEED */}
       <FlatList
+        ref={listRef}
         data={dummyVideos}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

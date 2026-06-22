@@ -36,6 +36,10 @@ export const profileStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
   },
+  topBarSpacer: {
+    width: 40,
+    height: 40,
+  },
   header: {
     alignItems: 'center',
     marginBottom: 20,

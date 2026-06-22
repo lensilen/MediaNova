@@ -56,7 +56,6 @@ export default function RootLayout() {
     </>
   );
 }
-
 const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -65,3 +64,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 });
+

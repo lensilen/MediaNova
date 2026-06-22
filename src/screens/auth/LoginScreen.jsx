@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,13 +13,16 @@ import { useRouter } from "expo-router";
 
 import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
+import { useGoogleAuth } from "../../utils/googleAuth";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { clearError, error, isAuthenticated, isLoading, login } = useAuth();
+  const { clearError, error, isAuthenticated, isLoading, login, loginGoogle } = useAuth();
+  const [googleRequest, googleResponse, promptGoogleLogin] = useGoogleAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -32,6 +34,43 @@ export default function LoginScreen() {
     setFormError("");
     clearError();
   }
+
+  useEffect(() => {
+    async function completeGoogleLogin() {
+      if (!googleResponse) {
+        return;
+      }
+
+      if (googleResponse.type === "dismiss" || googleResponse.type === "cancel") {
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      if (googleResponse.type !== "success") {
+        setFormError("Login Google gagal. Coba lagi.");
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      const idToken =
+        googleResponse.params?.id_token || googleResponse.authentication?.idToken;
+
+      if (!idToken) {
+        setFormError("Token Google tidak ditemukan. Coba login ulang.");
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      const result = await loginGoogle(idToken);
+      setIsGoogleLoading(false);
+
+      if (result.success) {
+        router.replace("/(tabs)");
+      }
+    }
+
+    completeGoogleLogin();
+  }, [googleResponse, loginGoogle, router]);
 
   async function handleLogin() {
     resetErrors();
@@ -48,14 +87,26 @@ export default function LoginScreen() {
     }
   }
 
-  function handleGoogleLogin() {
-    Alert.alert(
-      "Google Login",
-      "Client ID Google belum dikonfigurasi, jadi login email dipakai dulu.",
-    );
+  async function handleGoogleLogin() {
+    resetErrors();
+
+    if (!googleRequest) {
+      setFormError("Google Login belum siap. Coba lagi sebentar.");
+      return;
+    }
+
+    setIsGoogleLoading(true);
+
+    try {
+      await promptGoogleLogin();
+    } catch {
+      setIsGoogleLoading(false);
+      setFormError("Google Login gagal dibuka. Coba lagi.");
+    }
   }
 
   const message = formError || error;
+  const isBusy = isLoading || isGoogleLoading;
 
   return (
     <KeyboardAvoidingView
@@ -89,9 +140,9 @@ export default function LoginScreen() {
           {message ? <Text style={styles.error}>{message}</Text> : null}
 
           <Pressable
-            disabled={isLoading}
+            disabled={isBusy}
             onPress={handleLogin}
-            style={[styles.button, isLoading && styles.buttonDisabled]}>
+            style={[styles.button, isBusy && styles.buttonDisabled]}>
             {isLoading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
@@ -99,8 +150,18 @@ export default function LoginScreen() {
             )}
           </Pressable>
 
-          <Pressable onPress={handleGoogleLogin} style={styles.googleButton}>
-            <Text style={styles.googleButtonText}>Login dengan Google</Text>
+          <Pressable
+            disabled={isBusy || !googleRequest}
+            onPress={handleGoogleLogin}
+            style={[
+              styles.googleButton,
+              (isBusy || !googleRequest) && styles.buttonDisabled,
+            ]}>
+            {isGoogleLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={styles.googleButtonText}>Login dengan Google</Text>
+            )}
           </Pressable>
         </View>
 

@@ -28,14 +28,19 @@ function asParamValue(value) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export function ProfileScreen() {
+export function ProfileScreen({
+  embeddedUserId = '',
+  onBackPress,
+  onUserProfilePress,
+} = {}) {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
   const { profile: ownProfile, setProfile, user } = useAuth();
   const currentUserId = user?.uid || '';
-  const targetUserId = asParamValue(params.userId) || user?.uid || '';
+  const targetUserId = embeddedUserId || asParamValue(params.userId) || user?.uid || '';
   const isOwnProfile = !targetUserId || targetUserId === currentUserId;
+  const isEmbedded = Boolean(embeddedUserId || onBackPress);
   const [profile, setVisibleProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   
@@ -216,6 +221,23 @@ export function ProfileScreen() {
     );
   }
 
+  function handleUserProfilePress(item) {
+    const nextUserId = item?.id || item?.uid;
+
+    if (!nextUserId) {
+      return;
+    }
+
+    setConnectionSheet((state) => ({ ...state, visible: false }));
+
+    if (onUserProfilePress) {
+      onUserProfilePress(nextUserId);
+      return;
+    }
+
+    router.push({ pathname: '/(tabs)/profile', params: { userId: nextUserId } });
+  }
+
   if (isLoading) {
     return (
       <View style={[styles.centerState, { backgroundColor: colors.background }]}>
@@ -237,14 +259,23 @@ export function ProfileScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
+        {isEmbedded ? (
+          <Pressable
+            onPress={onBackPress}
+            style={[styles.iconButton, { borderColor: colors.border }]}>
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
+          </Pressable>
+        ) : null}
         <Text style={[styles.brand, { color: colors.text }]}>MediaNova</Text>
-        {isOwnProfile ? (
+        {isOwnProfile && !isEmbedded ? (
           <Pressable
             onPress={() => router.push('/settings')}
             style={[styles.iconButton, { borderColor: colors.border }]}>
             <Ionicons name="settings-outline" size={20} color={colors.text} />
           </Pressable>
-        ) : null}
+        ) : (
+          <View style={styles.topBarSpacer} />
+        )}
       </View>
 
       <View style={styles.header}>
@@ -332,10 +363,7 @@ export function ProfileScreen() {
         colors={colors}
         isLoading={connectionSheet.isLoading}
         onClose={() => setConnectionSheet((state) => ({ ...state, visible: false }))}
-        onUserPress={(item) => {
-          setConnectionSheet((state) => ({ ...state, visible: false }));
-          router.push({ pathname: '/(tabs)/profile', params: { userId: item.id } });
-        }}
+        onUserPress={handleUserProfilePress}
         title={connectionSheet.title}
         users={connectionSheet.users}
         visible={connectionSheet.visible}

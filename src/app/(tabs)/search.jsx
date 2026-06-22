@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProfileScreen } from '../../screens/profile/ProfileScreen';
 import { searchPosts, searchUsers } from '../../utils/social';
 
 const RECENT_SEARCHES_KEY = 'medianova:recent-searches';
@@ -58,6 +59,7 @@ export default function Search() {
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedCreatorId, setSelectedCreatorId] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -83,6 +85,23 @@ export default function Search() {
       isMounted = false;
     };
   }, []);
+
+  const resetSearchState = useCallback(() => {
+    searchRequestId.current += 1;
+    setQuery('');
+    setActiveQuery('');
+    setUsers([]);
+    setPosts([]);
+    setError('');
+    setIsSearching(false);
+    setSelectedCreatorId('');
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return resetSearchState;
+    }, [resetSearchState]),
+  );
 
   async function persistRecentSearches(nextSearches) {
     setRecentSearches(nextSearches);
@@ -188,13 +207,15 @@ export default function Search() {
       return;
     }
 
-    router.push({
-      pathname: '/(tabs)/profile',
-      params: { userId },
-    });
+    setSelectedCreatorId(userId);
   }
 
   function handleBackPress() {
+    if (selectedCreatorId) {
+      setSelectedCreatorId('');
+      return;
+    }
+
     if (activeQuery || query) {
       searchRequestId.current += 1;
       setQuery('');
@@ -211,6 +232,17 @@ export default function Search() {
 
   const isShowingResults = Boolean(activeQuery);
   const totalResults = users.length + posts.length;
+
+  if (selectedCreatorId) {
+    return (
+      <ProfileScreen
+        key={selectedCreatorId}
+        embeddedUserId={selectedCreatorId}
+        onBackPress={() => setSelectedCreatorId('')}
+        onUserProfilePress={setSelectedCreatorId}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -274,12 +306,12 @@ export default function Search() {
                         <Ionicons color={palette.white} name="person" size={18} />
                       </View>
                     )}
-                    <View style={styles.resultCopy}>
-                      <Text numberOfLines={1} style={styles.resultTitle}>
-                        {user.displayName || 'User'}
+                    <View style={styles.creatorCopy}>
+                      <Text numberOfLines={1} style={styles.creatorName}>
+                        {user.displayName || user.email?.split('@')[0] || 'User'}
                       </Text>
-                      <Text numberOfLines={1} style={styles.resultSubtitle}>
-                        {user.bio || user.email || 'MediaNova creator'}
+                      <Text numberOfLines={1} style={styles.creatorEmail}>
+                        {user.email || 'Email belum tersedia'}
                       </Text>
                     </View>
                   </Pressable>
@@ -467,6 +499,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     height: '100%',
   },
+  resultsArea: {
+    marginTop: 4,
+  },
   sectionHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -477,6 +512,123 @@ const styles = StyleSheet.create({
     color: '#151515',
     fontSize: 19,
     fontWeight: '800',
+  },
+  resultCount: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  errorText: {
+    color: '#C81E1E',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 14,
+  },
+  resultGroup: {
+    gap: 10,
+    marginTop: 22,
+  },
+  resultGroupTitle: {
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  userResult: {
+    alignItems: 'center',
+    backgroundColor: palette.page,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 74,
+    paddingHorizontal: 0,
+    paddingVertical: 10,
+  },
+  avatar: {
+    backgroundColor: palette.soft,
+    borderRadius: 26,
+    height: 52,
+    width: 52,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    backgroundColor: palette.ink,
+    borderRadius: 26,
+    height: 52,
+    justifyContent: 'center',
+    width: 52,
+  },
+  creatorCopy: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  creatorName: {
+    color: palette.ink,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  creatorEmail: {
+    color: palette.muted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  postResult: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: '#ECE3DD',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 68,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  postIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.soft,
+    borderRadius: 8,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  resultCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resultTitle: {
+    color: palette.ink,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  resultSubtitle: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    backgroundColor: palette.white,
+    borderColor: '#ECE3DD',
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 24,
+    padding: 22,
+  },
+  emptyTitle: {
+    color: palette.ink,
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+  emptyText: {
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 6,
+    textAlign: 'center',
   },
   clearText: {
     color: '#59545A',
@@ -495,6 +647,10 @@ const styles = StyleSheet.create({
   recentText: {
     color: '#2C282D',
     fontSize: 14,
+  },
+  emptyRecent: {
+    color: palette.muted,
+    fontSize: 13,
   },
   trendingTitle: {
     marginTop: 47,
