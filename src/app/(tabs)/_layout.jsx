@@ -7,7 +7,6 @@ const tabIcons = {
   index: ["home", "home-outline"],
   search: ["search", "search-outline"],
   add: ["add-circle", "add-circle-outline"],
-  audio: ["musical-notes", "musical-notes-outline"],
   profile: ["person", "person-outline"],
 };
 
@@ -72,14 +71,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="audio"
         options={{
-          title: "Audio",
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons
-              color={color}
-              name={getTabIcon("audio", focused)}
-              size={size}
-            />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen

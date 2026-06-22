@@ -13,6 +13,7 @@ export function CreateToolOverlay({
   isCountingDown,
   onFlipCamera,
   onToolPress,
+  stickerLabel,
   timerSeconds,
 }) {
   return (
@@ -56,6 +57,11 @@ export function CreateToolOverlay({
             {tool.key === "filter" && filterLabel ? (
               <View style={styles.sideToolBadge}>
                 <Text style={styles.sideToolBadgeText}>{filterLabel[0]}</Text>
+              </View>
+            ) : null}
+            {tool.key === "sticker" && stickerLabel ? (
+              <View style={styles.sideToolBadge}>
+                <Text style={styles.sideToolBadgeText}>{stickerLabel[0]}</Text>
               </View>
             ) : null}
           </Pressable>

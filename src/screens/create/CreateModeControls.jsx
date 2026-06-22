@@ -2,12 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 
 import { colors } from "../../constants/theme";
-import {
-  filters,
-  mediaModes,
-  noSticker,
-  stickerOptions,
-} from "./createOptions";
+import { filters, mediaModes, noSticker, stickerOptions } from "./createOptions";
 import { createStyles as styles } from "./createStyles";
 
 export function CreateModeControls({
@@ -22,15 +17,18 @@ export function CreateModeControls({
   onStickerSelect,
   pendingMedia,
   selectedFilter,
-  selectedSticker,
-  showFilters,
+  selectedSticker = noSticker,
+  showColorFilters,
+  showStickerFilters,
   videoPaused,
 }) {
   const isVideoRecording = mode === "video" && activeRecording;
+  const isAudioRecording = mode === "audio" && activeRecording;
+  const isMediaRecording = isVideoRecording || isAudioRecording;
 
   return (
     <View style={styles.bottomOverlay}>
-      {showFilters ? (
+      {showColorFilters ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -61,32 +59,33 @@ export function CreateModeControls({
               </Text>
             </Pressable>
           ))}
-          {[noSticker, ...stickerOptions].map((sticker) => (
+        </ScrollView>
+      ) : null}
+
+      {showStickerFilters ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRail}
+        >
+          {stickerOptions.map((sticker) => (
             <Pressable
               key={sticker.key}
               onPress={() => onStickerSelect(sticker)}
               style={[
-                styles.stickerChip,
-                selectedSticker.key === sticker.key
-                  ? styles.filterChipActive
-                  : null,
+                styles.filterChip,
+                selectedSticker.key === sticker.key ? styles.filterChipActive : null,
               ]}
             >
-              {sticker.source ? (
-                <Image
-                  resizeMode="contain"
-                  source={sticker.source}
-                  style={styles.stickerPreview}
-                />
-              ) : (
-                <Ionicons name="close" size={22} color={colors.primary} />
-              )}
+              <Image
+                resizeMode="contain"
+                source={sticker.source}
+                style={styles.stickerPreview}
+              />
               <Text
                 style={[
                   styles.filterLabel,
-                  selectedSticker.key === sticker.key
-                    ? styles.filterLabelActive
-                    : null,
+                  selectedSticker.key === sticker.key ? styles.filterLabelActive : null,
                 ]}
               >
                 {sticker.label}
@@ -127,24 +126,33 @@ export function CreateModeControls({
           )}
         </Pressable>
         <Pressable
-          style={[styles.captureButton, isVideoRecording ? styles.stopButton : null]}
+          style={[styles.captureButton, isMediaRecording ? styles.stopButton : null]}
           onPress={onCapture}
         >
           <View
             style={[
               styles.captureInner,
-              isVideoRecording ? styles.stopInner : null,
+              isMediaRecording ? styles.stopInner : null,
             ]}
           />
         </Pressable>
         <Pressable
-          style={styles.iconButton}
+          disabled={isAudioRecording}
+          style={[styles.iconButton, isAudioRecording ? styles.iconButtonActive : null]}
           onPress={isVideoRecording ? onPauseVideo : onResetFilter}
         >
           <Ionicons
-            name={isVideoRecording && !videoPaused ? "pause" : isVideoRecording ? "play" : "refresh"}
+            name={
+              isAudioRecording
+                ? "mic"
+                : isVideoRecording && !videoPaused
+                  ? "pause"
+                  : isVideoRecording
+                    ? "play"
+                    : "refresh"
+            }
             size={20}
-            color={colors.primary}
+            color={isAudioRecording ? colors.onPrimary : colors.primary}
           />
         </Pressable>
       </View>

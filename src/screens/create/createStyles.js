@@ -27,6 +27,9 @@ export const createStyles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: colors.surfaceSoft,
   },
+  iconButtonActive: {
+    backgroundColor: colors.primary,
+  },
   nextButton: {
     minWidth: 62,
     height: 34,
@@ -69,6 +72,25 @@ export const createStyles = StyleSheet.create({
     padding: 24,
     backgroundColor: colors.tertiary,
   },
+  audioRecorderSurface: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: colors.surfaceSoft,
+  },
+  audioMicBadge: {
+    width: 72,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 36,
+    backgroundColor: colors.surface,
+    marginBottom: 28,
+  },
+  audioMicBadgeLive: {
+    backgroundColor: colors.primary,
+  },
   fallbackTitle: {
     color: colors.primary,
     fontSize: 18,
@@ -88,6 +110,48 @@ export const createStyles = StyleSheet.create({
   },
   filterTint: {
     ...StyleSheet.absoluteFillObject,
+  },
+  faceOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  faceSticker: {
+    position: "absolute",
+  },
+  faceHint: {
+    position: "absolute",
+    top: "42%",
+    alignSelf: "center",
+    borderRadius: 18,
+    backgroundColor: "rgba(31,29,28,0.56)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  faceHintText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  faceStatus: {
+    position: "absolute",
+    left: 14,
+    top: 78,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    backgroundColor: "rgba(31,29,28,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  faceStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  faceStatusText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
   },
   topOverlay: {
     position: "absolute",
@@ -288,10 +352,33 @@ export const createStyles = StyleSheet.create({
   waveformRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
+    minHeight: 70,
   },
   waveformBar: {
-    width: 4,
+    width: 5,
     borderRadius: 3,
+  },
+  audioLivePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    backgroundColor: "rgba(200,30,30,0.12)",
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  audioLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.error,
+    marginRight: 6,
+  },
+  audioLiveText: {
+    color: colors.error,
+    fontSize: 11,
+    fontWeight: "900",
   },
 });

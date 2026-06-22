@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
+import * as VideoThumbnails from "expo-video-thumbnails";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Image, Pressable, SafeAreaView, Text, View } from "react-native";
 
-import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { colors } from "../../constants/theme";
-import { noSticker, stickerOptions, waveformBars } from "./createOptions";
+import { useCreateDraftStore } from "../../store/createDraftStore";
+import { waveformBars } from "./createOptions";
 import { capturePreviewStyles as styles } from "./capturePreviewStyles";
 
 function readParam(value, fallback = "") {
@@ -15,34 +16,67 @@ function readParam(value, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
-function getEditorRoute(mediaType) {
-  if (mediaType === "photo") return "/photo-editor";
-  if (mediaType === "audio") return "/audio-editor";
-  return "/video-editor";
-}
-
-function getStickerByKey(key) {
-  return stickerOptions.find((item) => item.key === key) || noSticker;
-}
-
 export function CapturePreviewScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const uri = readParam(params.uri);
-  const mediaType = readParam(params.mediaType, "video");
-  const filter = readParam(params.filter, "none");
-  const sticker = readParam(params.sticker, "none");
-  const selectedSticker = getStickerByKey(sticker);
-  const videoSource = useMemo(() => mediaType === "video" && uri ? { uri } : null, [mediaType, uri]);
-  const audioSource = useMemo(() => mediaType === "audio" && uri ? { uri } : null, [mediaType, uri]);
+  const draftId = readParam(params.draftId);
+  const storedDraft = useCreateDraftStore((state) =>
+    state.drafts[draftId] || state.drafts[state.currentDraftId],
+  );
+  const updateDraft = useCreateDraftStore((state) => state.updateDraft);
+  const uri = storedDraft?.uri || readParam(params.uri);
+  const mediaType =
+    storedDraft?.type || readParam(params.mediaType, "video");
+  const filter = storedDraft?.filter || readParam(params.filter, "none");
+  const sticker = storedDraft?.sticker || readParam(params.sticker, "none");
+  const videoSource = useMemo(
+    () => (mediaType === "video" && uri ? { uri } : null),
+    [mediaType, uri],
+  );
+  const audioSource = useMemo(
+    () => (mediaType === "audio" && uri ? uri : null),
+    [mediaType, uri],
+  );
   const videoPlayer = useVideoPlayer(videoSource, (player) => { player.loop = true; player.play(); });
   const audioPlayer = useAudioPlayer(audioSource);
   const audioStatus = useAudioPlayerStatus(audioPlayer);
 
+  useEffect(() => {
+    let isActive = true;
+
+    if (mediaType !== "video" || !uri || storedDraft?.thumbnailUri) {
+      return undefined;
+    }
+
+    VideoThumbnails.getThumbnailAsync(uri, { time: 350 })
+      .then((result) => {
+        if (isActive) {
+          updateDraft(storedDraft?.id || draftId, { thumbnailUri: result.uri });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+    };
+  }, [draftId, mediaType, storedDraft?.id, storedDraft?.thumbnailUri, updateDraft, uri]);
+
   function goNext() {
+    const routes = {
+      audio: "/audio-editor",
+      photo: "/photo-editor",
+      video: "/video-editor",
+    };
+
     router.push({
-      pathname: getEditorRoute(mediaType),
-      params: { filter, mediaType, sticker, uri },
+      pathname: routes[mediaType] || "/video-editor",
+      params: {
+        draftId: storedDraft?.id || draftId,
+        filter,
+        mediaType,
+        sticker,
+        uri,
+      },
     });
   }
 
@@ -53,11 +87,10 @@ export function CapturePreviewScreen() {
 
   function renderPreview() {
     if (mediaType === "photo") {
-      return (
-        <>
-          <Image source={{ uri }} resizeMode="cover" style={styles.media} />
-          <StickerOverlay sticker={selectedSticker} />
-        </>
+      return uri ? (
+        <Image source={{ uri }} resizeMode="cover" style={styles.media} />
+      ) : (
+        <EmptyPreview icon="image-outline" text="Foto belum kebaca." />
       );
     }
 
@@ -76,11 +109,15 @@ export function CapturePreviewScreen() {
       );
     }
 
-    return (
-      <>
-        <VideoView contentFit="cover" nativeControls player={videoPlayer} style={styles.media} />
-        <StickerOverlay sticker={selectedSticker} />
-      </>
+    return uri ? (
+      <VideoView
+        contentFit="cover"
+        nativeControls
+        player={videoPlayer}
+        style={styles.media}
+      />
+    ) : (
+      <EmptyPreview icon="videocam-outline" text="Video belum kebaca." />
     );
   }
 
@@ -99,5 +136,14 @@ export function CapturePreviewScreen() {
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+function EmptyPreview({ icon, text }) {
+  return (
+    <View style={styles.audioBox}>
+      <Ionicons name={icon} size={32} color={colors.primary} />
+      <Text style={styles.backText}>{text}</Text>
+    </View>
   );
 }
