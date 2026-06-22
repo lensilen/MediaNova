@@ -63,8 +63,12 @@ export function ProfileScreen() {
     return profile || {};
   }, [isOwnProfile, ownProfile, profile]);
 
-  const displayName = visibleProfile.displayName || user?.displayName || 'User';
-  const photoURL = visibleProfile.photoURL || user?.photoURL || '';
+  const displayName = isOwnProfile
+    ? (visibleProfile.displayName || user?.displayName || 'User')
+    : (visibleProfile.displayName || 'User');
+  const photoURL = isOwnProfile
+    ? (visibleProfile.photoURL || user?.photoURL || '')
+    : (visibleProfile.photoURL || '');
   const bio = visibleProfile.bio || 'Digital creator di MediaNova.';
   const location = visibleProfile.location || 'MediaNova Studio';
   

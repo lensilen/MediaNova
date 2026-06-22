@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   limit as queryLimit,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
@@ -295,6 +296,50 @@ export async function getNotifications(userId, limitValue = DEFAULT_NOTIFICATION
   }
 }
 
+export function subscribeNotifications(
+  userId,
+  callback,
+  onError,
+  limitValue = DEFAULT_NOTIFICATION_LIMIT,
+) {
+  const cleanUserId = normalizeText(userId);
+
+  if (!cleanUserId || typeof callback !== "function") {
+    return () => {};
+  }
+
+  const safeLimit = normalizeLimit(limitValue);
+  const notificationsQuery = query(
+    collection(db, "notifications"),
+    where("toUserId", "==", cleanUserId),
+    queryLimit(safeLimit),
+  );
+
+  return onSnapshot(
+    notificationsQuery,
+    (snapshot) => {
+      const notifications = sortNewestFirst(
+        snapshot.docs.map(normalizeSnapshot).filter(Boolean),
+      );
+
+      callback({ success: true, notifications });
+    },
+    (error) => {
+      const result = {
+        success: false,
+        error: getNotificationErrorMessage(error.code),
+      };
+
+      if (typeof onError === "function") {
+        onError(result);
+        return;
+      }
+
+      callback(result);
+    },
+  );
+}
+
 export async function markNotificationAsRead(notificationId) {
   const cleanNotificationId = normalizeText(notificationId);
 
@@ -313,6 +358,43 @@ export async function markNotificationAsRead(notificationId) {
   } catch (error) {
     return { success: false, error: getNotificationErrorMessage(error.code) };
   }
+}
+
+export function subscribeUnreadCount(userId, callback, onError) {
+  const cleanUserId = normalizeText(userId);
+
+  if (!cleanUserId || typeof callback !== "function") {
+    return () => {};
+  }
+
+  const notificationsQuery = query(
+    collection(db, "notifications"),
+    where("toUserId", "==", cleanUserId),
+  );
+
+  return onSnapshot(
+    notificationsQuery,
+    (snapshot) => {
+      const count = snapshot.docs.filter((notificationDoc) => {
+        return notificationDoc.data().read === false;
+      }).length;
+
+      callback({ success: true, count });
+    },
+    (error) => {
+      const result = {
+        success: false,
+        error: getNotificationErrorMessage(error.code),
+      };
+
+      if (typeof onError === "function") {
+        onError(result);
+        return;
+      }
+
+      callback(result);
+    },
+  );
 }
 
 export async function getUnreadCount(userId) {

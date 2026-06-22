@@ -17,8 +17,6 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-console.log("Firebase Config:", firebaseConfig);
-
 const missingKeys = Object.entries(firebaseConfig)
   .filter(([_, value]) => !value)
   .map(([key]) => key);

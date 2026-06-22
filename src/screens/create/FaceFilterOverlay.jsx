@@ -3,6 +3,10 @@ import { Image, Text, View } from "react-native";
 import { noSticker } from "./createOptions";
 import { createStyles as styles } from "./createStyles";
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(value, max));
+}
+
 function makeStickerStyle(face, sticker) {
   const bounds = face?.bounds;
 
@@ -10,8 +14,12 @@ function makeStickerStyle(face, sticker) {
 
   const width = bounds.width * (sticker.scale || 1.45);
   const height = width / (sticker.aspectRatio || 1);
-  const left = bounds.x + bounds.width / 2 - width / 2;
-  const top = bounds.y + bounds.height * (sticker.yOffset || -0.5);
+  const left = clamp(bounds.x + bounds.width / 2 - width / 2, -width * 0.2, 1000);
+  const top = clamp(
+    bounds.y + bounds.height * (sticker.yOffset || -0.5),
+    -height * 0.2,
+    1000,
+  );
 
   return {
     width,

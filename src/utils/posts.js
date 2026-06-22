@@ -59,6 +59,36 @@ function validatePostPayload(userId, type, mediaURL) {
   return null;
 }
 
+function normalizeVisibility(value) {
+  const cleanValue = normalizeText(value).toLowerCase();
+
+  return ["everyone", "followers"].includes(cleanValue) ? cleanValue : "everyone";
+}
+
+function sanitizePlainObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce((result, [key, nextValue]) => {
+    if (nextValue === undefined || nextValue === null) {
+      return result;
+    }
+
+    if (typeof nextValue === "object" && !Array.isArray(nextValue)) {
+      const nestedValue = sanitizePlainObject(nextValue);
+
+      if (Object.keys(nestedValue).length > 0) {
+        return { ...result, [key]: nestedValue };
+      }
+
+      return result;
+    }
+
+    return { ...result, [key]: nextValue };
+  }, {});
+}
+
 export async function createPost(
   userId,
   type,
@@ -73,7 +103,8 @@ export async function createPost(
   const cleanCaption = normalizeText(caption);
   const cleanTitle = normalizeText(metadata.title);
   const cleanLocation = normalizeText(metadata.location);
-  const visibility = normalizeText(metadata.visibility) || "everyone";
+  const visibility = normalizeVisibility(metadata.visibility);
+  const editMeta = sanitizePlainObject(metadata.editMeta);
   const validationError = validatePostPayload(cleanUserId, type, cleanMediaURL);
 
   if (validationError) {
@@ -86,12 +117,14 @@ export async function createPost(
     mediaURL: cleanMediaURL,
     thumbnailURL: cleanThumbnailURL,
     title: cleanTitle,
+    titleLower: cleanTitle.toLowerCase(),
     caption: cleanCaption,
     captionLower: cleanCaption.toLowerCase(),
     location: cleanLocation,
+    locationLower: cleanLocation.toLowerCase(),
     visibility,
     allowComments: metadata.allowComments !== false,
-    editMeta: metadata.editMeta || {},
+    editMeta,
     likes: 0,
     commentsCount: 0,
     createdAt: serverTimestamp(),

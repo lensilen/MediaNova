@@ -1,9 +1,11 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   StyleSheet,
   View,
   ActivityIndicator,
+  Share,
   Text,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +35,25 @@ export default function FeedScreen() {
   const [activeId, setActiveId] = useState(
     dummyVideos[0].id
   );
+
+  const handleShare = useCallback(async (post) => {
+    const caption = post?.caption || "MediaNova post";
+    const mediaURL = post?.mediaURL || "";
+    const username = post?.username ? `@${post.username}` : "MediaNova";
+    const message = mediaURL
+      ? `${caption}\n${username}\n${mediaURL}`
+      : `${caption}\n${username}`;
+
+    try {
+      await Share.share({
+        message,
+        title: caption,
+        url: mediaURL,
+      });
+    } catch {
+      Alert.alert("Share gagal", "Post belum bisa dibagikan. Coba lagi.");
+    }
+  }, []);
 
   const viewabilityConfig = useMemo(() => ({
     itemVisiblePercentThreshold: 80,
@@ -75,12 +96,10 @@ export default function FeedScreen() {
         onSave={() => {
           console.log("Save:", item.id);
         }}
-        onShare={() => {
-          console.log("Share:", item.id);
-        }}
+        onShare={handleShare}
       />
     ),
-    [activeId]
+    [activeId, handleShare]
   );
 
   if (!dummyVideos.length) {

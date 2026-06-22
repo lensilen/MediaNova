@@ -1,6 +1,9 @@
 import { CameraView } from "expo-camera";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 
+import { StickerOverlay } from "../../components/editor/StickerOverlay";
+import { colors } from "../../constants/theme";
 import { AudioCapturePanel } from "./AudioCapturePanel";
 import { CameraPermissionPanel } from "./CameraPermissionPanel";
 import { noSticker } from "./createOptions";
@@ -27,6 +30,31 @@ export function RecorderCameraView({
   selectedSticker = noSticker,
   useFaceCamera,
 }) {
+  const useStaticStickerFallback = useFaceCamera && !NativeFaceFilterCamera;
+
+  useEffect(() => {
+    if (!useStaticStickerFallback) {
+      return undefined;
+    }
+
+    faceCameraRef.current = {
+      isStaticStickerFallback: true,
+      startRecording: () => cameraRef.current?.recordAsync({ maxDuration: 60 }),
+      stopRecording: () => cameraRef.current?.stopRecording(),
+      takePhoto: () => cameraRef.current?.takePictureAsync({ quality: 0.86 }),
+      togglePause: async () => {
+        await cameraRef.current?.toggleRecordingAsync?.();
+        return false;
+      },
+    };
+
+    return () => {
+      if (faceCameraRef.current?.isStaticStickerFallback) {
+        faceCameraRef.current = null;
+      }
+    };
+  }, [cameraRef, faceCameraRef, useStaticStickerFallback]);
+
   if (mode === "audio") {
     return (
       <AudioCapturePanel
@@ -44,11 +72,22 @@ export function RecorderCameraView({
   if (useFaceCamera) {
     if (!NativeFaceFilterCamera) {
       return (
-        <View style={styles.cameraFallback}>
-          <Text style={styles.fallbackTitle}>Sticker butuh dev build</Text>
-          <Text style={styles.fallbackText}>
-            Face detection aktif setelah aplikasi dibuild lewat EAS.
-          </Text>
+        <View style={styles.camera}>
+          <CameraView
+            ref={cameraRef}
+            enableTorch={mode === "video" && flashMode !== "off"}
+            facing={facing}
+            flash={flashMode}
+            mode={mode === "photo" ? "picture" : "video"}
+            onCameraReady={onReady}
+            style={styles.camera}
+            videoQuality="720p"
+          />
+          <StickerOverlay compact sticker={selectedSticker} />
+          <View pointerEvents="none" style={styles.faceStatus}>
+            <View style={[styles.faceStatusDot, { backgroundColor: colors.warning }]} />
+            <Text style={styles.faceStatusText}>Tracking aktif di dev build</Text>
+          </View>
         </View>
       );
     }

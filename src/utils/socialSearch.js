@@ -62,12 +62,12 @@ export async function searchPosts(searchTerm, limitValue = DEFAULT_SEARCH_LIMIT)
 
   try {
     const safeLimit = normalizeLimit(limitValue);
-    const prefixMatches = await getPrefixMatches(
-      "posts",
-      "captionLower",
-      cleanSearchTerm,
-      safeLimit,
-    );
+    const prefixResults = await Promise.all([
+      getPrefixMatches("posts", "captionLower", cleanSearchTerm, safeLimit),
+      getPrefixMatches("posts", "titleLower", cleanSearchTerm, safeLimit),
+      getPrefixMatches("posts", "locationLower", cleanSearchTerm, safeLimit),
+    ]);
+    const prefixMatches = uniqueById(prefixResults.flat()).slice(0, safeLimit);
     const fallbackMatches =
       prefixMatches.length >= safeLimit
         ? []
@@ -75,9 +75,16 @@ export async function searchPosts(searchTerm, limitValue = DEFAULT_SEARCH_LIMIT)
             "posts",
             (post) => {
               const caption = normalizeSearchText(post.caption);
+              const location = normalizeSearchText(post.location);
+              const title = normalizeSearchText(post.title);
               const type = normalizeSearchText(post.type);
 
-              return caption.includes(cleanSearchTerm) || type.includes(cleanSearchTerm);
+              return (
+                caption.includes(cleanSearchTerm) ||
+                location.includes(cleanSearchTerm) ||
+                title.includes(cleanSearchTerm) ||
+                type.includes(cleanSearchTerm)
+              );
             },
             safeLimit,
           );

@@ -1,7 +1,8 @@
 import { useCameraPermissions, useMicrophonePermissions } from "expo-camera";
+import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -10,7 +11,8 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, SafeAreaView, Text, View } from "react-native";
+import { Alert, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CreateCameraShell } from "./CreateCameraShell";
 import { useCreateDraftStore } from "../../store/createDraftStore";
@@ -28,6 +30,7 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
   const router = useRouter();
   const cameraRef = useRef(null);
   const faceCameraRef = useRef(null);
+  const recorderStateRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const recorder = useAudioRecorder(audioRecordingOptions);
@@ -56,6 +59,56 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
     requestCameraPermission: requestPermission,
     requestMicPermission,
   });
+
+  useEffect(() => {
+    recorderStateRef.current = recorderState;
+  }, [recorderState]);
+
+  const resetCreateState = useCallback(() => {
+    faceCameraRef.current = null;
+    setMode(initialMode);
+    setFacing("back");
+    setSelectedFilter(noFilter);
+    setSelectedSticker(noSticker);
+    setFlashMode("off");
+    setPendingMedia(null);
+    setIsRecording(false);
+    setVideoPaused(false);
+    setRecordSeconds(0);
+    setCameraReady(false);
+    setTimerSeconds(0);
+    setCountdown(0);
+    setCountdownAction(null);
+    setShowColorFilters(false);
+    setShowStickerFilters(false);
+  }, [initialMode]);
+
+  const stopActiveMedia = useCallback(() => {
+    try {
+      cameraRef.current?.stopRecording?.();
+    } catch {}
+
+    try {
+      faceCameraRef.current?.stopRecording?.();
+    } catch {}
+
+    if (recorderStateRef.current?.isRecording) {
+      try {
+        recorder.stop()?.catch?.(() => {});
+      } catch {}
+    }
+
+    setAudioModeAsync({ allowsRecording: false }).catch(() => {});
+  }, [recorder]);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        stopActiveMedia();
+        resetCreateState();
+      };
+    }, [resetCreateState, stopActiveMedia]),
+  );
 
   const openCapturePreview = useCallback(
     (media) => {
@@ -208,7 +261,36 @@ export function VideoRecorderScreen({ initialMode = "video" }) {
 
   async function pickFromLibrary() {
     if (mode === "audio") {
-      Alert.alert("Record audio", "Audio dibuat dari mikrofon supaya bisa masuk editor audio.");
+      if (recorderState.isRecording) {
+        Alert.alert("Audio sedang direkam", "Stop rekaman dulu sebelum memilih file audio.");
+        return;
+      }
+
+      try {
+        const result = await DocumentPicker.getDocumentAsync({
+          copyToCacheDirectory: true,
+          multiple: false,
+          type: ["audio/*"],
+        });
+
+        if (result.canceled) {
+          return;
+        }
+
+        const asset = result.assets?.[0];
+
+        if (!asset?.uri) {
+          Alert.alert("Audio tidak terbaca", "Pilih file audio lain dari device.");
+          return;
+        }
+
+        const media = { name: asset.name || "Audio", type: "audio", uri: asset.uri };
+        setPendingMedia(media);
+        openCapturePreview(media);
+      } catch {
+        Alert.alert("Audio gagal dipilih", "Coba pilih file audio lagi.");
+      }
+
       return;
     }
 

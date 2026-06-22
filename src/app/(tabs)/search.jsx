@@ -181,6 +181,19 @@ export default function Search() {
     runSearch(searchTerm, { saveRecent: true });
   }
 
+  function handleCreatorPress(user) {
+    const userId = user?.id || user?.uid;
+
+    if (!userId) {
+      return;
+    }
+
+    router.push({
+      pathname: '/(tabs)/profile',
+      params: { userId },
+    });
+  }
+
   function handleBackPress() {
     if (activeQuery || query) {
       searchRequestId.current += 1;
@@ -247,7 +260,10 @@ export default function Search() {
               <View style={styles.resultGroup}>
                 <Text style={styles.resultGroupTitle}>Creators</Text>
                 {users.map((user) => (
-                  <Pressable key={user.id} style={styles.userResult}>
+                  <Pressable
+                    key={user.id}
+                    onPress={() => handleCreatorPress(user)}
+                    style={styles.userResult}>
                     {user.photoURL ? (
                       <Image
                         source={{ uri: user.photoURL }}

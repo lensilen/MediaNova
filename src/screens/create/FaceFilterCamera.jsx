@@ -32,6 +32,25 @@ function cloneFace(face) {
   };
 }
 
+function mixNumber(current, next, amount = 0.38) {
+  return current + (next - current) * amount;
+}
+
+function smoothFace(currentFace, nextFace) {
+  if (!nextFace) return null;
+  if (!currentFace) return nextFace;
+
+  return {
+    bounds: {
+      height: mixNumber(currentFace.bounds.height, nextFace.bounds.height),
+      width: mixNumber(currentFace.bounds.width, nextFace.bounds.width),
+      x: mixNumber(currentFace.bounds.x, nextFace.bounds.x),
+      y: mixNumber(currentFace.bounds.y, nextFace.bounds.y),
+    },
+    rollAngle: mixNumber(currentFace.rollAngle || 0, nextFace.rollAngle || 0),
+  };
+}
+
 export function FaceFilterCamera({
   active,
   facing,
@@ -52,7 +71,10 @@ export function FaceFilterCamera({
     cameraFacing: facing,
     minFaceSize: 0.15,
     onError: () => setFace(null),
-    onFacesDetected: (faces) => setFace(cloneFace(faces?.[0])),
+    onFacesDetected: (faces) => {
+      const nextFace = cloneFace(faces?.[0]);
+      setFace((currentFace) => smoothFace(currentFace, nextFace));
+    },
     outputResolution: "preview",
     performanceMode: "fast",
     runLandmarks: true,

@@ -25,6 +25,12 @@ export function CreateModeControls({
   const isVideoRecording = mode === "video" && activeRecording;
   const isAudioRecording = mode === "audio" && activeRecording;
   const isMediaRecording = isVideoRecording || isAudioRecording;
+  const libraryIcon =
+    mode === "audio"
+      ? pendingMedia?.type === "audio"
+        ? "musical-notes"
+        : "musical-notes-outline"
+      : "images-outline";
 
   return (
     <View style={styles.bottomOverlay}>
@@ -122,7 +128,7 @@ export function CreateModeControls({
           {pendingMedia?.uri && pendingMedia.type !== "audio" ? (
             <Image source={{ uri: pendingMedia.uri }} style={styles.thumbImage} />
           ) : (
-            <Ionicons name="images-outline" size={22} color={colors.primary} />
+            <Ionicons name={libraryIcon} size={22} color={colors.primary} />
           )}
         </Pressable>
         <Pressable

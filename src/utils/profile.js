@@ -131,12 +131,19 @@ export async function updateProfile(userId, updates = {}) {
     }
 
     if (auth.currentUser?.uid === cleanUserId) {
-      await updateAuthProfile(auth.currentUser, {
-        displayName: payload.displayName || auth.currentUser.displayName,
-        photoURL: Object.prototype.hasOwnProperty.call(payload, "photoURL")
-          ? payload.photoURL
-          : auth.currentUser.photoURL,
-      });
+      const authUpdates = {};
+
+      if (payload.displayName) {
+        authUpdates.displayName = payload.displayName;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(payload, "photoURL")) {
+        authUpdates.photoURL = payload.photoURL;
+      }
+
+      if (Object.keys(authUpdates).length > 0) {
+        await updateAuthProfile(auth.currentUser, authUpdates);
+      }
     }
 
     return getUserProfile(cleanUserId);

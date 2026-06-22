@@ -10,11 +10,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
-  SafeAreaView,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors } from "../../constants/theme";
 import { useCreateDraftStore } from "../../store/createDraftStore";

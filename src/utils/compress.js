@@ -2,8 +2,16 @@ import * as FileSystem from "expo-file-system/legacy";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import * as VideoThumbnails from "expo-video-thumbnails";
 
+let videoCompressorModule = null;
+
 function normalizeUri(uri) {
   return typeof uri === "string" ? uri.trim() : "";
+}
+
+function normalizeNumber(value, fallback) {
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
 async function getLocalFileInfo(uri) {
@@ -57,7 +65,82 @@ export async function compressImage(uri, options = {}) {
   }
 }
 
-export async function compressVideo(uri) {
+async function loadVideoCompressor() {
+  if (videoCompressorModule) {
+    return videoCompressorModule;
+  }
+
+  try {
+    const module = await import("react-native-compressor");
+
+    if (!module.Video?.compress) {
+      return null;
+    }
+
+    videoCompressorModule = module.Video;
+    return videoCompressorModule;
+  } catch {
+    return null;
+  }
+}
+
+function createVideoCompressionOptions(options = {}) {
+  const compressionOptions = {
+    compressionMethod: options.compressionMethod || "auto",
+    maxSize: normalizeNumber(options.maxSize, 720),
+    minimumFileSizeForCompress: normalizeNumber(
+      options.minimumFileSizeForCompress,
+      10,
+    ),
+  };
+
+  if (options.bitrate) {
+    compressionOptions.bitrate = normalizeNumber(options.bitrate, 0);
+  }
+
+  if (options.progressDivider) {
+    compressionOptions.progressDivider = normalizeNumber(
+      options.progressDivider,
+      10,
+    );
+  }
+
+  if (typeof options.getCancellationId === "function") {
+    compressionOptions.getCancellationId = options.getCancellationId;
+  }
+
+  if (typeof options.downloadProgress === "function") {
+    compressionOptions.downloadProgress = options.downloadProgress;
+  }
+
+  if (typeof options.stripAudio === "boolean") {
+    compressionOptions.stripAudio = options.stripAudio;
+  }
+
+  return compressionOptions;
+}
+
+function notifyCompressionProgress(onProgress, progress) {
+  if (typeof onProgress !== "function") {
+    return;
+  }
+
+  const normalizedProgress = Math.min(
+    Math.max(normalizeNumber(progress, 0), 0),
+    1,
+  );
+
+  onProgress({
+    bytesTransferred: 0,
+    totalBytes: 0,
+    progress: normalizedProgress,
+    percent: Math.round(normalizedProgress * 100),
+    state: "running",
+    phase: "compress",
+  });
+}
+
+export async function compressVideo(uri, options = {}) {
   const cleanUri = normalizeUri(uri);
 
   if (!cleanUri) {
@@ -70,13 +153,51 @@ export async function compressVideo(uri) {
     return { success: false, error: "File video tidak ditemukan." };
   }
 
-  return {
-    success: true,
-    originalUri: cleanUri,
-    uri: cleanUri,
-    size: info.size || 0,
-    didCompress: false,
-  };
+  const Video = await loadVideoCompressor();
+
+  if (!Video) {
+    return {
+      success: true,
+      originalUri: cleanUri,
+      uri: cleanUri,
+      originalSize: info.size || 0,
+      size: info.size || 0,
+      didCompress: false,
+      skippedReason:
+        "Video compressor belum tersedia di runtime ini. Upload pakai file asli.",
+    };
+  }
+
+  try {
+    const compressedUri = normalizeUri(
+      await Video.compress(
+        cleanUri,
+        createVideoCompressionOptions(options),
+        (progress) => notifyCompressionProgress(options.onProgress, progress),
+      ),
+    );
+    const resultUri = compressedUri || cleanUri;
+    const resultInfo = await getLocalFileInfo(resultUri);
+
+    return {
+      success: true,
+      originalUri: cleanUri,
+      uri: resultUri,
+      originalSize: info.size || 0,
+      size: resultInfo.size || info.size || 0,
+      didCompress: resultUri !== cleanUri,
+    };
+  } catch {
+    return {
+      success: true,
+      originalUri: cleanUri,
+      uri: cleanUri,
+      originalSize: info.size || 0,
+      size: info.size || 0,
+      didCompress: false,
+      skippedReason: "Gagal mengompres video. Upload pakai file asli.",
+    };
+  }
 }
 
 export async function createVideoThumbnail(uri, options = {}) {

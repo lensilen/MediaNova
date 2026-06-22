@@ -6,18 +6,19 @@ import {
   Alert,
   Image,
   Pressable,
-  SafeAreaView,
   Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors } from "../../constants/theme";
 import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { useAuth } from "../../hooks/useAuth";
 import { useUpload } from "../../hooks/useUpload";
 import { useCreateDraftStore } from "../../store/createDraftStore";
+import { sendLocalNotification } from "../../utils/notifications";
 import { createPost } from "../../utils/posts";
 import { getStickerByKey, waveformBars } from "./createOptions";
 import { previewStyles as styles } from "./previewStyles";
@@ -81,7 +82,7 @@ export function PreviewScreen() {
   }
 
   async function uploadByType() {
-    const metadata = { mediaType, ...buildEditMeta() };
+    const metadata = { mediaType, userId: user.uid, ...buildEditMeta() };
 
     if (mediaType === "photo") {
       return uploadImage(uri, null, { metadata });
@@ -128,6 +129,11 @@ export function PreviewScreen() {
       Alert.alert("Post gagal", postResult.error);
       return;
     }
+
+    await sendLocalNotification("Post terkirim", "Feed baru berhasil ditambahkan.", {
+      postId: postResult.post.id,
+      type: mediaType,
+    });
 
     clearDraft(storedDraft?.id || draftId);
     router.replace("/(tabs)");

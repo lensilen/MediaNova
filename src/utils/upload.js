@@ -73,8 +73,18 @@ async function getFileInfo(uri) {
 }
 
 async function uriToBlob(uri) {
-  const response = await fetch(uri);
-  return response.blob();
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+      resolve(xhr.response);
+    };
+    xhr.onerror = function (e) {
+      reject(new TypeError("Network request failed: " + e.message));
+    };
+    xhr.responseType = "blob";
+    xhr.open("GET", uri, true);
+    xhr.send(null);
+  });
 }
 
 function notifyProgress(onProgress, snapshot, phase = "upload") {

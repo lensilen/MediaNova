@@ -5,11 +5,11 @@ import { useState } from "react";
 import {
   Alert,
   Image,
-  SafeAreaView,
   Text,
   useWindowDimensions,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FilterStrip } from "../../components/editor/FilterStrip";
 import { StickerOverlay } from "../../components/editor/StickerOverlay";
