@@ -14,10 +14,12 @@ import {
 } from "react-native";
 
 import { colors } from "../../constants/theme";
+import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { useAuth } from "../../hooks/useAuth";
 import { useUpload } from "../../hooks/useUpload";
+import { useCreateDraftStore } from "../../store/createDraftStore";
 import { createPost } from "../../utils/posts";
-import { waveformBars } from "./createOptions";
+import { getStickerByKey, waveformBars } from "./createOptions";
 import { previewStyles as styles } from "./previewStyles";
 
 function readParam(value, fallback = "") {
@@ -31,8 +33,17 @@ export function PreviewScreen() {
   const { user } = useAuth();
   const { error, isUploading, progress, uploadAudio, uploadImage, uploadVideo } =
     useUpload();
-  const uri = readParam(params.uri);
-  const mediaType = readParam(params.mediaType, "video");
+  const draftId = readParam(params.draftId);
+  const storedDraft = useCreateDraftStore((state) =>
+    state.drafts[draftId] || state.drafts[state.currentDraftId],
+  );
+  const clearDraft = useCreateDraftStore((state) => state.clearDraft);
+  const uri = storedDraft?.uri || readParam(params.uri);
+  const mediaType =
+    storedDraft?.type || readParam(params.mediaType, "video");
+  const selectedSticker = getStickerByKey(
+    storedDraft?.sticker || readParam(params.sticker, "none"),
+  );
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [location, setLocation] = useState("");
@@ -49,17 +60,23 @@ export function PreviewScreen() {
 
   function buildEditMeta() {
     return {
-      brightness: readParam(params.brightness),
-      contrast: readParam(params.contrast),
-      filter: readParam(params.filter, "none"),
-      hasSticker: readParam(params.hasSticker, "false") === "true",
-      overlayText: readParam(params.overlayText),
-      saturation: readParam(params.saturation),
-      speed: readParam(params.speed, "1"),
-      sticker: readParam(params.sticker, "none"),
-      trimEnd: readParam(params.trimEnd),
-      trimStart: readParam(params.trimStart),
-      volume: readParam(params.volume, "1"),
+      ...(storedDraft?.editMeta || {}),
+      brightness: storedDraft?.editMeta?.brightness || readParam(params.brightness),
+      contrast: storedDraft?.editMeta?.contrast || readParam(params.contrast),
+      filter:
+        storedDraft?.editMeta?.filter ||
+        storedDraft?.filter ||
+        readParam(params.filter, "none"),
+      overlayText:
+        storedDraft?.editMeta?.overlayText || readParam(params.overlayText),
+      saturation:
+        storedDraft?.editMeta?.saturation || readParam(params.saturation),
+      speed: storedDraft?.editMeta?.speed || readParam(params.speed, "1"),
+      sticker: selectedSticker.key,
+      trimEnd: storedDraft?.editMeta?.trimEnd || readParam(params.trimEnd),
+      trimStart:
+        storedDraft?.editMeta?.trimStart || readParam(params.trimStart),
+      volume: storedDraft?.editMeta?.volume || readParam(params.volume, "1"),
     };
   }
 
@@ -112,6 +129,7 @@ export function PreviewScreen() {
       return;
     }
 
+    clearDraft(storedDraft?.id || draftId);
     router.replace("/(tabs)");
   }
 
@@ -122,18 +140,28 @@ export function PreviewScreen() {
   function renderMedia() {
     if (mediaType === "audio") {
       return (
-        <View style={styles.mediaThumb}>
-          {waveformBars.slice(0, 7).map((height, index) => (
-            <View
-              key={`${height}-${index}`}
-              style={{
-                width: 4,
-                height: height + 8,
-                borderRadius: 3,
-                backgroundColor: index % 2 ? colors.secondary : colors.primary,
-              }}
-            />
-          ))}
+        <View style={styles.audioPreviewCard}>
+          <View style={styles.audioPreviewIcon}>
+            <Ionicons name="mic" size={18} color={colors.onPrimary} />
+          </View>
+          <View style={styles.audioPreviewWave}>
+            {waveformBars.slice(0, 14).map((height, index) => (
+              <View
+                key={`${height}-${index}`}
+                style={[
+                  styles.audioPreviewBar,
+                  {
+                    height: Math.max(12, height + 4),
+                    backgroundColor:
+                      index % 2 ? colors.secondary : colors.primary,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+          <Text numberOfLines={1} style={styles.audioPreviewText}>
+            Voice note
+          </Text>
         </View>
       );
     }
@@ -142,6 +170,7 @@ export function PreviewScreen() {
       return (
         <View style={styles.mediaThumb}>
           <VideoView contentFit="cover" player={player} style={styles.mediaImage} />
+          <StickerOverlay compact sticker={selectedSticker} />
         </View>
       );
     }
@@ -149,7 +178,10 @@ export function PreviewScreen() {
     return (
       <View style={styles.mediaThumb}>
         {uri ? (
-          <Image source={{ uri }} style={styles.mediaImage} />
+          <>
+            <Image source={{ uri }} style={styles.mediaImage} />
+            <StickerOverlay compact sticker={selectedSticker} />
+          </>
         ) : (
           <Ionicons name="image-outline" size={26} color={colors.primary} />
         )}

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -34,11 +34,11 @@ export default function FeedScreen() {
     dummyVideos[0].id
   );
 
-  const viewabilityConfig = useRef({
+  const viewabilityConfig = useMemo(() => ({
     itemVisiblePercentThreshold: 80,
-  }).current;
+  }), []);
 
-  const onViewableItemsChanged = useRef(
+  const onViewableItemsChanged = useCallback(
     ({ viewableItems }) => {
       if (
         viewableItems &&
@@ -48,8 +48,9 @@ export default function FeedScreen() {
           viewableItems[0].item.id
         );
       }
-    }
-  ).current;
+    },
+    []
+  );
 
   const renderItem = useCallback(
     ({ item }) => (

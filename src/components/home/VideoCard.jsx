@@ -57,14 +57,15 @@ export function VideoCard({
   const displayedSaves = (post?.saves || 0) + (saved ? 1 : 0);
 
   const player = useVideoPlayer(
-    post?.mediaURL || "https://www.w3schools.com/html/mov_bbb.mp4"
+    post?.mediaURL || "https://www.w3schools.com/html/mov_bbb.mp4",
+    (videoPlayer) => {
+      videoPlayer.loop = true;
+      videoPlayer.muted = false;
+    }
   );
 
   useEffect(() => {
     if (!player) return;
-
-    player.loop = true;
-    player.muted = false;
 
     if (isActive && !isPaused) {
       player.play();
@@ -82,7 +83,7 @@ export function VideoCard({
         const duration = player.duration || 1;
 
         setProgress(current / duration);
-      } catch (error) {}
+      } catch (_error) {}
     }, 250);
 
     return () => clearInterval(interval);
@@ -102,13 +103,13 @@ export function VideoCard({
 
   // 3. Fungsi Navigasi yang disesuaikan untuk Expo Router
   // Cari fungsi ini di dalam VideoCard.jsx milikmu
-const handleProfileNavigation = () => {
-  // Langsung paksa menggunakan expo-router tanpa mengecek props onProfilePress
-  router.push({
-    pathname: "/profile",
-    params: { username: post?.username || "student_creator" }
-  }); 
-};
+  const handleProfileNavigation = () => {
+    onProfilePress?.(post);
+    router.push({
+      pathname: "/profile",
+      params: { username: post?.username || "student_creator" },
+    });
+  };
 
   return (
     <View style={styles.container}>
