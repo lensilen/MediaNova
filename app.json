@@ -9,7 +9,6 @@
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.kelompok3.medianova",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -20,6 +19,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
