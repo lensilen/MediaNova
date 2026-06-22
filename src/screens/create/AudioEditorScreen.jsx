@@ -7,26 +7,42 @@ import {
 } from "expo-audio";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  SafeAreaView,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 import { colors } from "../../constants/theme";
+import { useCreateDraftStore } from "../../store/createDraftStore";
+import { processAudioEdit } from "../../utils/mediaProcessing";
 import { audioTools, formatTime, waveformBars } from "./createOptions";
 import { EditorHeader } from "./EditorHeader";
 import { EditorToolBar } from "./EditorToolBar";
-import { TimelineStrip } from "./TimelineStrip";
 import { editorStyles as styles } from "./editorStyles";
 
 export function AudioEditorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const uri = typeof params.uri === "string" ? params.uri : "";
+  const { height } = useWindowDimensions();
+  const draftId = typeof params.draftId === "string" ? params.draftId : "";
+  const storedDraft = useCreateDraftStore((state) =>
+    state.drafts[draftId] || state.drafts[state.currentDraftId],
+  );
+  const updateDraft = useCreateDraftStore((state) => state.updateDraft);
+  const uri = storedDraft?.uri || (typeof params.uri === "string" ? params.uri : "");
+  const previewHeight = Math.min(300, Math.max(220, height * 0.32));
   const [activeTool, setActiveTool] = useState("trim");
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(60);
   const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const source = useMemo(() => (uri ? { uri } : null), [uri]);
+  const source = useMemo(() => uri || null, [uri]);
   const player = useAudioPlayer(source, { updateInterval: 300 });
   const status = useAudioPlayerStatus(player);
 
@@ -38,18 +54,57 @@ export function AudioEditorScreen() {
     player.setPlaybackRate(speed);
   }, [player, speed]);
 
-  function goPreview() {
+  function pushPreview(outputUri) {
+    const editMeta = {
+      mediaType: "audio",
+      speed: String(speed),
+      trimEnd: String(trimEnd),
+      trimStart: String(trimStart),
+      uri: outputUri,
+      volume: String(volume),
+    };
+    const targetDraftId = storedDraft?.id || draftId;
+
+    if (targetDraftId) {
+      updateDraft(targetDraftId, {
+        editMeta,
+        type: "audio",
+        uri: outputUri,
+      });
+    }
+
     router.push({
       pathname: "/preview",
       params: {
-        mediaType: "audio",
-        speed: String(speed),
-        trimEnd: String(trimEnd),
-        trimStart: String(trimStart),
-        uri,
-        volume: String(volume),
+        draftId: targetDraftId,
+        ...editMeta,
       },
     });
+  }
+
+  async function goPreview() {
+    if (!uri || isProcessing) return;
+
+    setIsProcessing(true);
+
+    try {
+      const outputUri = await processAudioEdit(uri, {
+        speed,
+        trimEnd,
+        trimStart,
+        volume,
+      });
+
+      pushPreview(outputUri);
+    } catch {
+      Alert.alert(
+        "Preview pakai audio asli",
+        "Proses edit native belum jalan di build ini, tapi preview post tetap bisa dicek.",
+      );
+      pushPreview(uri);
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   function togglePlayback() {
@@ -165,11 +220,12 @@ export function AudioEditorScreen() {
           onBack={() => router.back()}
           onNext={goPreview}
         />
-        <View style={styles.previewCard}>{renderWaveform()}</View>
-        <TimelineStrip
-          endLabel={`00:${String(trimEnd).padStart(2, "0")}`}
-          startLabel={`00:${String(trimStart).padStart(2, "0")}`}
-        />
+        {isProcessing ? (
+          <Text style={styles.metaText}>Memproses audio...</Text>
+        ) : null}
+        <View style={[styles.previewCard, { height: previewHeight }]}>
+          {renderWaveform()}
+        </View>
         <View style={styles.panel}>{renderPanel()}</View>
         <EditorToolBar
           activeTool={activeTool}

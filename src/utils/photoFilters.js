@@ -9,6 +9,10 @@ function clamp(value) {
   return Math.max(0, Math.min(255, value));
 }
 
+function clampUnit(value) {
+  return Math.max(-1, Math.min(1, Number(value) || 0));
+}
+
 function base64ToBytes(base64) {
   const binary = decodeBase64(base64);
   const bytes = new Uint8Array(binary.length);
@@ -28,6 +32,29 @@ function bytesToBase64(bytes) {
   }
 
   return encodeBase64(binary);
+}
+
+function applyBeauty(data, settings = {}) {
+  const brightness = clampUnit(settings.brightness) * 36;
+  const contrast = 1 + clampUnit(settings.contrast) * 0.35;
+  const saturation = 1 + clampUnit(settings.saturation) * 0.45;
+
+  if (!brightness && contrast === 1 && saturation === 1) return;
+
+  for (let index = 0; index < data.length; index += 4) {
+    let red = data[index] + brightness;
+    let green = data[index + 1] + brightness;
+    let blue = data[index + 2] + brightness;
+    const gray = red * 0.299 + green * 0.587 + blue * 0.114;
+
+    red = gray + (red - gray) * saturation;
+    green = gray + (green - gray) * saturation;
+    blue = gray + (blue - gray) * saturation;
+
+    data[index] = clamp((red - 128) * contrast + 128);
+    data[index + 1] = clamp((green - 128) * contrast + 128);
+    data[index + 2] = clamp((blue - 128) * contrast + 128);
+  }
 }
 
 function applyPixelFilter(data, filterKey) {
@@ -61,44 +88,14 @@ function applyPixelFilter(data, filterKey) {
   }
 }
 
-function hasBeautyAdjustments(adjustments = {}) {
-  return ["brightness", "contrast", "saturation"].some((key) => {
-    return Math.abs(Number(adjustments[key] || 0)) > 0.01;
-  });
-}
-
-function applyBeautyAdjustments(data, adjustments = {}) {
-  const brightness = Number(adjustments.brightness || 0) * 60;
-  const contrast = 1 + Number(adjustments.contrast || 0);
-  const saturation = 1 + Number(adjustments.saturation || 0);
-
-  for (let index = 0; index < data.length; index += 4) {
-    let red = (data[index] - 128) * contrast + 128 + brightness;
-    let green = (data[index + 1] - 128) * contrast + 128 + brightness;
-    let blue = (data[index + 2] - 128) * contrast + 128 + brightness;
-    const gray = red * 0.299 + green * 0.587 + blue * 0.114;
-
-    red = gray + (red - gray) * saturation;
-    green = gray + (green - gray) * saturation;
-    blue = gray + (blue - gray) * saturation;
-
-    data[index] = clamp(red);
-    data[index + 1] = clamp(green);
-    data[index + 2] = clamp(blue);
-  }
-}
-
-export async function applyPhotoFilter(uri, filterKey = "none", adjustments = {}) {
+export async function applyPhotoFilter(uri, filterKey = "none", beauty = {}) {
   const normalized = await manipulateAsync(
     uri,
     [{ resize: { width: 1280 } }],
     { base64: true, compress: 0.92, format: SaveFormat.JPEG },
   );
 
-  const hasColorFilter = COLOR_FILTERS.includes(filterKey);
-  const hasBeauty = hasBeautyAdjustments(adjustments);
-
-  if ((!hasColorFilter && !hasBeauty) || !normalized.base64) {
+  if (!normalized.base64) {
     return normalized.uri;
   }
 
@@ -106,19 +103,17 @@ export async function applyPhotoFilter(uri, filterKey = "none", adjustments = {}
     useTArray: true,
   });
 
-  if (hasColorFilter) {
+  if (COLOR_FILTERS.includes(filterKey)) {
     applyPixelFilter(decoded.data, filterKey);
   }
 
-  if (hasBeauty) {
-    applyBeautyAdjustments(decoded.data, adjustments);
-  }
+  applyBeauty(decoded.data, beauty);
 
   const encoded = jpeg.encode(
     { data: decoded.data, height: decoded.height, width: decoded.width },
     90,
   );
-  const outputUri = `${FileSystem.cacheDirectory}medianova-${filterKey}-beauty-${Date.now()}.jpg`;
+  const outputUri = `${FileSystem.cacheDirectory}medianova-${filterKey}-${Date.now()}.jpg`;
 
   await FileSystem.writeAsStringAsync(outputUri, bytesToBase64(encoded.data), {
     encoding: FileSystem.EncodingType.Base64,

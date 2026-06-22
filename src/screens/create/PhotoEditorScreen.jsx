@@ -5,25 +5,20 @@ import { useState } from "react";
 import {
   Alert,
   Image,
-  Pressable,
   SafeAreaView,
-  ScrollView,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import { FilterStrip } from "../../components/editor/FilterStrip";
 import { StickerOverlay } from "../../components/editor/StickerOverlay";
 import { colors } from "../../constants/theme";
-import {
-  filters,
-  noFilter,
-  noSticker,
-  photoTools,
-  stickerOptions,
-} from "./createOptions";
+import { useCreateDraftStore } from "../../store/createDraftStore";
+import { filters, getStickerByKey, noFilter, photoTools } from "./createOptions";
 import { EditorHeader } from "./EditorHeader";
 import { EditorToolBar } from "./EditorToolBar";
+import { SaturationSlider } from "./SaturationSlider";
 import { editorStyles as styles } from "./editorStyles";
 import { applyPhotoFilter } from "../../utils/photoFilters";
 
@@ -31,21 +26,22 @@ function getFilterByKey(key) {
   return filters.find((filter) => filter.key === key) || noFilter;
 }
 
-function getStickerByKey(key) {
-  return stickerOptions.find((sticker) => sticker.key === key) || noSticker;
-}
-
 export function PhotoEditorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const uri = typeof params.uri === "string" ? params.uri : "";
+  const { height } = useWindowDimensions();
+  const draftId = typeof params.draftId === "string" ? params.draftId : "";
+  const storedDraft = useCreateDraftStore((state) =>
+    state.drafts[draftId] || state.drafts[state.currentDraftId],
+  );
+  const updateDraft = useCreateDraftStore((state) => state.updateDraft);
+  const uri = storedDraft?.uri || (typeof params.uri === "string" ? params.uri : "");
+  const previewHeight = Math.min(390, Math.max(260, height * 0.46));
   const [activeTool, setActiveTool] = useState("filters");
   const [selectedFilter, setSelectedFilter] = useState(
-    getFilterByKey(params.filter),
+    getFilterByKey(storedDraft?.filter || params.filter),
   );
-  const [selectedSticker, setSelectedSticker] = useState(
-    getStickerByKey(params.sticker),
-  );
+  const selectedSticker = getStickerByKey(storedDraft?.sticker || params.sticker);
   const [brightness, setBrightness] = useState(0);
   const [contrast, setContrast] = useState(0);
   const [saturation, setSaturation] = useState(0);
@@ -62,18 +58,32 @@ export function PhotoEditorScreen() {
         contrast,
         saturation,
       });
+      const editMeta = {
+        brightness: String(brightness),
+        contrast: String(contrast),
+        filter: selectedFilter.key,
+        mediaType: "photo",
+        saturation: String(saturation),
+        sticker: selectedSticker.key,
+        uri: outputUri,
+      };
+      const targetDraftId = storedDraft?.id || draftId;
+
+      if (targetDraftId) {
+        updateDraft(targetDraftId, {
+          editMeta,
+          filter: selectedFilter.key,
+          sticker: selectedSticker.key,
+          type: "photo",
+          uri: outputUri,
+        });
+      }
 
       router.push({
         pathname: "/preview",
         params: {
-          brightness: String(brightness),
-          contrast: String(contrast),
-          filter: selectedFilter.key,
-          hasSticker: selectedSticker.key !== noSticker.key ? "true" : "false",
-          mediaType: "photo",
-          saturation: String(saturation),
-          sticker: selectedSticker.key,
-          uri: outputUri,
+          draftId: targetDraftId,
+          ...editMeta,
         },
       });
     } catch {
@@ -114,21 +124,25 @@ export function PhotoEditorScreen() {
     );
   }
 
-  function renderSlider(label, value, onChange) {
+  function renderSlider(label, value, onChange, colored = false) {
     return (
       <>
         <Text style={styles.sliderLabel}>
           {label} {Math.round(value * 100)}
         </Text>
-        <Slider
-          minimumValue={-1}
-          maximumValue={1}
-          step={0.05}
-          value={value}
-          onValueChange={onChange}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-        />
+        {colored ? (
+          <SaturationSlider value={value} onChange={onChange} />
+        ) : (
+          <Slider
+            minimumValue={-1}
+            maximumValue={1}
+            step={0.05}
+            value={value}
+            onValueChange={onChange}
+            minimumTrackTintColor={colors.primary}
+            maximumTrackTintColor={colors.border}
+          />
+        )}
       </>
     );
   }
@@ -143,60 +157,13 @@ export function PhotoEditorScreen() {
       );
     }
 
-    if (activeTool === "sticker") {
-      return (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.stickerRow}
-        >
-          {[noSticker, ...stickerOptions].map((sticker) => (
-            <Pressable
-              key={sticker.key}
-              onPress={() => setSelectedSticker(sticker)}
-              style={[
-                styles.stickerOption,
-                selectedSticker.key === sticker.key
-                  ? styles.stickerOptionActive
-                  : null,
-              ]}
-            >
-              {sticker.source ? (
-                <Image
-                  resizeMode="contain"
-                  source={sticker.source}
-                  style={styles.stickerOptionImage}
-                />
-              ) : (
-                <Ionicons name="close" size={22} color={colors.primary} />
-              )}
-              <Text
-                style={[
-                  styles.stickerOptionText,
-                  selectedSticker.key === sticker.key
-                    ? styles.stickerOptionTextActive
-                    : null,
-                ]}
-              >
-                {sticker.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      );
-    }
-
-    if (activeTool === "beauty") {
-      return (
-        <>
-          {renderSlider("Brightness", brightness, setBrightness)}
-          {renderSlider("Contrast", contrast, setContrast)}
-          {renderSlider("Saturation", saturation, setSaturation)}
-        </>
-      );
-    }
-
-    return null;
+    return (
+      <>
+        {renderSlider("Brightness", brightness, setBrightness)}
+        {renderSlider("Contrast", contrast, setContrast)}
+        {renderSlider("Saturation", saturation, setSaturation, true)}
+      </>
+    );
   }
 
   return (
@@ -210,7 +177,9 @@ export function PhotoEditorScreen() {
         {isProcessing ? (
           <Text style={styles.metaText}>Memproses filter foto...</Text>
         ) : null}
-        <View style={styles.previewCard}>{renderPreview()}</View>
+        <View style={[styles.previewCard, { height: previewHeight }]}>
+          {renderPreview()}
+        </View>
         <View style={styles.panel}>{renderPanel()}</View>
         <EditorToolBar
           activeTool={activeTool}
