@@ -31,6 +31,8 @@ export function RecorderCameraView({
   useFaceCamera,
 }) {
   const useStaticStickerFallback = useFaceCamera && !NativeFaceFilterCamera;
+  const canUseTorch = facing === "back" && mode === "video" && flashMode === "on";
+  const safeFlashMode = facing === "back" ? flashMode : "off";
 
   useEffect(() => {
     if (!useStaticStickerFallback) {
@@ -75,9 +77,9 @@ export function RecorderCameraView({
         <View style={styles.camera}>
           <CameraView
             ref={cameraRef}
-            enableTorch={mode === "video" && flashMode !== "off"}
+            enableTorch={canUseTorch}
             facing={facing}
-            flash={flashMode}
+            flash={safeFlashMode}
             mode={mode === "photo" ? "picture" : "video"}
             onCameraReady={onReady}
             style={styles.camera}
@@ -110,9 +112,9 @@ export function RecorderCameraView({
   return (
     <CameraView
       ref={cameraRef}
-      enableTorch={mode === "video" && flashMode !== "off"}
+      enableTorch={canUseTorch}
       facing={facing}
-      flash={flashMode}
+      flash={safeFlashMode}
       mode={mode === "photo" ? "picture" : "video"}
       onCameraReady={onReady}
       style={styles.camera}

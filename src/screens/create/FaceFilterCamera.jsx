@@ -64,6 +64,10 @@ export function FaceFilterCamera({
   const [layout, setLayout] = useState({ height: 1, width: 1 });
   const [face, setFace] = useState(null);
   const device = useCameraDevice(facing);
+  const canUseFlash = facing === "back" && device?.hasFlash === true;
+  const safeFlashMode = canUseFlash ? flashMode : "off";
+  const safeTorchMode =
+    canUseFlash && mode === "video" && flashMode === "on" ? "on" : "off";
   const photoOutput = usePhotoOutput({ quality: 0.86 });
   const videoOutput = useVideoOutput({ enableAudio: true });
   const faceOutput = useFaceDetectorOutput({
@@ -89,11 +93,11 @@ export function FaceFilterCamera({
 
   const takePhoto = useCallback(async () => {
     const file = await photoOutput.capturePhotoToFile(
-      { enableShutterSound: true, flashMode },
+      { enableShutterSound: true, flashMode: safeFlashMode },
       {},
     );
     return { uri: toFileUri(file?.filePath) };
-  }, [flashMode, photoOutput]);
+  }, [photoOutput, safeFlashMode]);
 
   const startRecording = useCallback(async () => {
     const recorder = await videoOutput.createRecorder({ maxDuration: 60 });
@@ -160,7 +164,7 @@ export function FaceFilterCamera({
         outputs={outputs}
         resizeMode="cover"
         style={styles.camera}
-        torchMode={mode === "video" && flashMode !== "off" ? "on" : "off"}
+        torchMode={safeTorchMode}
       />
       <FaceFilterOverlay face={face} selectedSticker={selectedSticker} />
       {selectedSticker.key !== noSticker.key ? (
