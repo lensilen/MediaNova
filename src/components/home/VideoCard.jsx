@@ -1,25 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Image,
-  Dimensions,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useRouter } from "expo-router"; // 1. Gunakan useRouter dari expo-router
-
-import { ActionButtons } from "./ActionButtons";
-import { CommentSheet } from "./CommentSheet";
-import { useAuth } from "../../hooks/useAuth";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  formatTime,
-  waveformBars,
-} from "../../screens/create/createOptions";
+  Alert,
+  Dimensions,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+import { colors } from "../../constants/theme";
+import { useAuth } from "../../hooks/useAuth";
+import { formatTime, waveformBars } from "../../screens/create/createOptions";
 import {
   isLiked,
   isSaved,
@@ -28,9 +24,11 @@ import {
   unlikePost,
   unsavePost,
 } from "../../utils/socialPosts";
-import { colors } from "../../constants/theme";
+import { ActionButtons } from "./ActionButtons";
+import { CommentSheet } from "./CommentSheet";
 
 const { height } = Dimensions.get("window");
+const demoVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
 
 export function VideoCard({
   post,
@@ -39,13 +37,12 @@ export function VideoCard({
   onComment,
   onShare,
 }) {
-  const router = useRouter(); // 2. Inisialisasi router
-  const wasActiveRef = useRef(false);
+  const router = useRouter();
   const { user } = useAuth();
-  const mediaUrl = post?.mediaURL || "https://www.w3schools.com/html/mov_bbb.mp4";
-  const isAudioPost = post?.type === "audio";
-  const isPhotoPost = post?.type === "photo";
-  const isVideoPost = !isAudioPost && !isPhotoPost;
+  const mediaUrl = post?.mediaURL || demoVideoUrl;
+  const type = post?.type || "video";
+  const isAudioPost = type === "audio";
+  const isPhotoPost = type === "photo";
 
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -54,23 +51,11 @@ export function VideoCard({
   const [likeCount, setLikeCount] = useState(post?.likes || 0);
   const [saveCount, setSaveCount] = useState(post?.saves || 0);
   const [commentCount, setCommentCount] = useState(
-    post?.commentsCount ?? post?.comments ?? 0
+    post?.commentsCount ?? post?.comments ?? 0,
   );
-  const [isPaused, setIsPaused] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  const player = useVideoPlayer(
-    isVideoPost ? mediaUrl : null,
-    (videoPlayer) => {
-      videoPlayer.loop = true;
-      videoPlayer.muted = false;
-    }
-  );
-  const audioPlayer = useAudioPlayer(isAudioPost ? mediaUrl : null);
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
 
   useEffect(() => {
-    let isActiveCard = true;
+    let isMounted = true;
 
     async function loadSocialState() {
       if (!post?.id || post?.isDemo || !user?.uid) {
@@ -84,7 +69,7 @@ export function VideoCard({
         isSaved(post.id, user.uid),
       ]);
 
-      if (!isActiveCard) return;
+      if (!isMounted) return;
 
       if (likedResult.success) setLiked(likedResult.isLiked);
       if (savedResult.success) setSaved(savedResult.isSaved);
@@ -93,94 +78,9 @@ export function VideoCard({
     loadSocialState();
 
     return () => {
-      isActiveCard = false;
+      isMounted = false;
     };
   }, [post?.id, post?.isDemo, user?.uid]);
-
-  useEffect(() => {
-    if (!isVideoPost || !player) return;
-
-    if (isActive && !isPaused) {
-      player.play();
-    } else {
-      player.pause();
-
-      if (wasActiveRef.current && !isActive) {
-        try {
-          player.replay();
-          player.pause();
-        } catch (_error) {}
-
-        setIsPaused(false);
-        setProgress(0);
-      }
-    }
-
-    wasActiveRef.current = isActive;
-  }, [isActive, isPaused, isVideoPost, player]);
-
-  useEffect(() => {
-    if (!isVideoPost || !player) return;
-
-    const interval = setInterval(() => {
-      try {
-        const current = player.currentTime || 0;
-        const duration = player.duration || 1;
-
-        setProgress(current / duration);
-      } catch (_error) {}
-    }, 250);
-
-    return () => clearInterval(interval);
-  }, [isVideoPost, player]);
-
-  useEffect(() => {
-    if (!isAudioPost) return;
-
-    const timer = setInterval(() => {
-      const current = audioStatus?.currentTime || 0;
-      const duration = audioStatus?.duration || audioStatus?.durationMillis / 1000 || 1;
-
-      setProgress(duration > 0 ? current / duration : 0);
-      setIsPaused(!audioStatus?.playing);
-    }, 250);
-
-    return () => clearInterval(timer);
-  }, [
-    audioStatus?.currentTime,
-    audioStatus?.duration,
-    audioStatus?.durationMillis,
-    audioStatus?.playing,
-    isAudioPost,
-  ]);
-
-  useEffect(() => {
-    if (isAudioPost && !isActive) {
-      audioPlayer.pause();
-    }
-  }, [audioPlayer, isActive, isAudioPost]);
-
-  const handleMediaPress = () => {
-    if (isAudioPost) {
-      if (audioStatus?.playing) {
-        audioPlayer.pause();
-      } else {
-        audioPlayer.play();
-      }
-
-      return;
-    }
-
-    if (!isVideoPost || !player) return;
-
-    if (isPaused) {
-      player.play();
-    } else {
-      player.pause();
-    }
-
-    setIsPaused(!isPaused);
-  };
 
   async function handleLike() {
     if (post?.isDemo) {
@@ -238,87 +138,38 @@ export function VideoCard({
     }
   }
 
-  // 3. Fungsi Navigasi yang disesuaikan untuk Expo Router
-  // Cari fungsi ini di dalam VideoCard.jsx milikmu
-  const handleProfileNavigation = () => {
+  function handleProfileNavigation() {
     onProfilePress?.(post);
     router.push({
       pathname: "/profile",
       params: { username: post?.username || "student_creator" },
     });
-  };
+  }
 
-  const currentSeconds = isAudioPost
-    ? audioStatus?.currentTime || 0
-    : player?.currentTime || 0;
-  const durationSeconds = isAudioPost
-    ? audioStatus?.duration || audioStatus?.durationMillis / 1000 || 0
-    : player?.duration || 0;
+  function renderMedia() {
+    if (isAudioPost) {
+      return (
+        <AudioSurface
+          isActive={isActive}
+          title={post?.title || "Voice note"}
+          uri={mediaUrl}
+        />
+      );
+    }
+
+    if (isPhotoPost) {
+      return <Image source={{ uri: mediaUrl }} style={styles.mediaFill} />;
+    }
+
+    return <VideoSurface isActive={isActive} uri={mediaUrl} />;
+  }
 
   return (
     <View style={styles.container}>
-      <Pressable style={styles.videoWrapper} onPress={handleMediaPress}>
-        {isVideoPost ? (
-          <>
-            <VideoView
-              player={player}
-              style={styles.video}
-              nativeControls={false}
-              contentFit="cover"
-            />
-
-            {isPaused && (
-              <View style={styles.pauseOverlay}>
-                <Ionicons name="pause" size={60} color="#FFFFFF" />
-              </View>
-            )}
-          </>
-        ) : null}
-
-        {isAudioPost ? (
-          <View style={styles.audioSurface}>
-            <View style={styles.audioDisc}>
-              <Ionicons name="mic" size={34} color="#FFFFFF" />
-            </View>
-            <Text style={styles.audioTitle}>{post?.title || "Voice note"}</Text>
-            <View style={styles.audioWave}>
-              {waveformBars.map((height, index) => (
-                <View
-                  key={`${height}-${index}`}
-                  style={[
-                    styles.audioBar,
-                    {
-                      height: Math.max(12, height + 8),
-                      opacity: progress * waveformBars.length >= index ? 1 : 0.38,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-            <View style={styles.audioPlayBadge}>
-              <Ionicons
-                name={audioStatus?.playing ? "pause" : "play"}
-                size={28}
-                color="#FFFFFF"
-              />
-            </View>
-          </View>
-        ) : null}
-
-        {isPhotoPost ? (
-          <Image
-            source={{ uri: mediaUrl }}
-            style={styles.video}
-            resizeMode="cover"
-          />
-        ) : null}
-      </Pressable>
+      {renderMedia()}
 
       <View style={styles.overlay}>
-        <Pressable
-          style={styles.profileRow}
-          onPress={handleProfileNavigation}
-        >
+        <Pressable style={styles.profileRow} onPress={handleProfileNavigation}>
           <View>
             <Image
               source={{
@@ -326,7 +177,6 @@ export function VideoCard({
               }}
               style={styles.avatar}
             />
-
             <View style={styles.followBadge}>
               <Ionicons name="add" size={12} color="#FFFFFF" />
             </View>
@@ -347,56 +197,189 @@ export function VideoCard({
       </View>
 
       <ActionButtons
-        likes={likeCount}
         comments={commentCount}
-        saves={saveCount}
         liked={liked}
-        saved={saved}
-        onLike={handleLike}
+        likes={likeCount}
         onComment={() => {
           setShowComments(true);
           onComment?.(post);
         }}
+        onLike={handleLike}
         onSave={handleSave}
         onShare={() => onShare?.(post)}
+        saved={saved}
+        saves={saveCount}
       />
 
-      <View style={styles.timelineWrapper}>
-        <Text style={styles.timeText}>
-          {formatTime(currentSeconds)}
-        </Text>
-
-        <View style={styles.progressContainer}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${progress * 100}%`,
-              },
-            ]}
-          />
-        </View>
-
-        <Text style={styles.timeText}>
-          {formatTime(durationSeconds)}
-        </Text>
-      </View>
-
       <CommentSheet
-        visible={showComments}
-        onClose={() => setShowComments(false)}
         comments={[]}
-        postId={post.id}
+        onClose={() => setShowComments(false)}
         onCommentAdded={() => setCommentCount((prev) => prev + 1)}
+        postId={post.id}
+        visible={showComments}
       />
     </View>
   );
 }
 
+function VideoSurface({ isActive, uri }) {
+  const wasActiveRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentSeconds, setCurrentSeconds] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState(0);
+  const player = useVideoPlayer(uri, (videoPlayer) => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = false;
+  });
+
+  useEffect(() => {
+    if (isActive && !isPaused) {
+      player.play();
+    } else {
+      player.pause();
+
+      if (wasActiveRef.current && !isActive) {
+        try {
+          player.replay();
+          player.pause();
+        } catch {}
+
+        setIsPaused(false);
+        setProgress(0);
+      }
+    }
+
+    wasActiveRef.current = isActive;
+  }, [isActive, isPaused, player]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        const current = player.currentTime || 0;
+        const duration = player.duration || 0;
+
+        setCurrentSeconds(current);
+        setDurationSeconds(duration);
+        setProgress(duration > 0 ? current / duration : 0);
+      } catch {}
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [player]);
+
+  function togglePlayback() {
+    if (isPaused) {
+      player.play();
+    } else {
+      player.pause();
+    }
+
+    setIsPaused(!isPaused);
+  }
+
+  return (
+    <Pressable style={styles.mediaWrapper} onPress={togglePlayback}>
+      <VideoView
+        contentFit="cover"
+        nativeControls={false}
+        player={player}
+        style={styles.mediaFill}
+      />
+      {isPaused ? (
+        <View style={styles.pauseOverlay}>
+          <Ionicons name="pause" size={60} color="#FFFFFF" />
+        </View>
+      ) : null}
+      <Timeline
+        currentSeconds={currentSeconds}
+        durationSeconds={durationSeconds}
+        progress={progress}
+      />
+    </Pressable>
+  );
+}
+
+function AudioSurface({ isActive, title, uri }) {
+  const player = useAudioPlayer(uri);
+  const status = useAudioPlayerStatus(player);
+  const currentSeconds = status?.currentTime || 0;
+  const durationSeconds = status?.duration || status?.durationMillis / 1000 || 0;
+  const progress = durationSeconds > 0 ? currentSeconds / durationSeconds : 0;
+
+  useEffect(() => {
+    if (!isActive) {
+      player.pause();
+    }
+  }, [isActive, player]);
+
+  function togglePlayback() {
+    if (status?.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }
+
+  return (
+    <Pressable style={styles.mediaWrapper} onPress={togglePlayback}>
+      <View style={styles.audioSurface}>
+        <View style={styles.audioDisc}>
+          <Ionicons name="mic" size={34} color="#FFFFFF" />
+        </View>
+        <Text style={styles.audioTitle}>{title}</Text>
+        <View style={styles.audioWave}>
+          {waveformBars.map((heightValue, index) => (
+            <View
+              key={`${heightValue}-${index}`}
+              style={[
+                styles.audioBar,
+                {
+                  height: Math.max(12, heightValue + 8),
+                  opacity: progress * waveformBars.length >= index ? 1 : 0.38,
+                },
+              ]}
+            />
+          ))}
+        </View>
+        <View style={styles.audioPlayBadge}>
+          <Ionicons
+            name={status?.playing ? "pause" : "play"}
+            size={28}
+            color="#FFFFFF"
+          />
+        </View>
+      </View>
+      <Timeline
+        currentSeconds={currentSeconds}
+        durationSeconds={durationSeconds}
+        progress={progress}
+      />
+    </Pressable>
+  );
+}
+
+function Timeline({ currentSeconds, durationSeconds, progress }) {
+  return (
+    <View style={styles.timelineWrapper}>
+      <Text style={styles.timeText}>{formatTime(currentSeconds)}</Text>
+      <View style={styles.progressContainer}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${Math.min(Math.max(progress, 0), 1) * 100}%` },
+          ]}
+        />
+      </View>
+      <Text style={styles.timeText}>{formatTime(durationSeconds)}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { height: height, backgroundColor: "#000" },
-  videoWrapper: { flex: 1 },
-  video: { position: "absolute", width: "100%", height: "100%" },
+  container: { height, backgroundColor: "#000" },
+  mediaWrapper: { flex: 1 },
+  mediaFill: { position: "absolute", width: "100%", height: "100%" },
   audioSurface: {
     flex: 1,
     alignItems: "center",
@@ -485,7 +468,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  timeText: { color: "#FFFFFF", fontSize: 10, minWidth: 30 },
+  timeText: { color: "#FFFFFF", fontSize: 10, minWidth: 42 },
   progressContainer: {
     flex: 1,
     height: 3,
@@ -493,5 +476,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: "rgba(255,255,255,0.2)",
   },
-  progressFill: { height: "100%", borderRadius: 2, backgroundColor: colors?.primary || "#FFF" },
+  progressFill: {
+    height: "100%",
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
 });
