@@ -112,6 +112,8 @@ function buildVideoTransforms(metadata = {}) {
   const brightness = mapSignedEffect(metadata.brightness, 55);
   const contrast = mapSignedEffect(metadata.contrast, 45);
   const saturation = mapSignedEffect(metadata.saturation, 70);
+  const speed = cleanNumber(metadata.speed, 1);
+  const volume = cleanNumber(metadata.volume, 1);
   const overlayText = cleanText(metadata.overlayText);
   const filter = cleanText(metadata.filter);
 
@@ -121,6 +123,8 @@ function buildVideoTransforms(metadata = {}) {
   if (brightness) transforms.push(`e_brightness:${brightness}`);
   if (contrast) transforms.push(`e_contrast:${contrast}`);
   if (saturation) transforms.push(`e_saturation:${saturation}`);
+  if (speed !== 1) transforms.push(`e_accelerate:${Math.round((speed - 1) * 100)}`);
+  if (volume !== 1) transforms.push(`e_volume:${Math.round(volume * 100)}`);
   if (overlayText) {
     transforms.push(
       `l_text:Arial_48_bold:${encodeOverlayText(overlayText)},co_white,g_south_west,x_40,y_120`,
@@ -133,8 +137,14 @@ function buildVideoTransforms(metadata = {}) {
 function buildImageTransforms(metadata = {}) {
   const transforms = ["c_limit,w_1280", "q_auto"];
   const filter = cleanText(metadata.filter);
+  const brightness = mapSignedEffect(metadata.brightness, 55);
+  const contrast = mapSignedEffect(metadata.contrast, 45);
+  const saturation = mapSignedEffect(metadata.saturation, 70);
 
   if (filterEffects[filter]) transforms.push(filterEffects[filter]);
+  if (brightness) transforms.push(`e_brightness:${brightness}`);
+  if (contrast) transforms.push(`e_contrast:${contrast}`);
+  if (saturation) transforms.push(`e_saturation:${saturation}`);
 
   return transforms.join(",");
 }

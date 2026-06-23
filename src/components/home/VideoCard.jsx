@@ -141,8 +141,8 @@ export function VideoCard({
   function handleProfileNavigation() {
     onProfilePress?.(post);
     router.push({
-      pathname: "/profile",
-      params: { username: post?.username || "student_creator" },
+      pathname: "/(tabs)/profile",
+      params: { userId: post?.userId || "" },
     });
   }
 
@@ -201,6 +201,11 @@ export function VideoCard({
         liked={liked}
         likes={likeCount}
         onComment={() => {
+          if (post?.allowComments === false) {
+            Alert.alert("Komentar ditutup", "Creator menonaktifkan komentar.");
+            return;
+          }
+
           setShowComments(true);
           onComment?.(post);
         }}

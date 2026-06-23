@@ -258,6 +258,48 @@ export async function getSavedPosts(userId) {
   }
 }
 
+async function getPostsFromActivity(collectionName, userId) {
+  const cleanUserId = normalizeText(userId);
+
+  if (!cleanUserId) {
+    return { success: false, error: "User ID wajib diisi." };
+  }
+
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, collectionName), where("userId", "==", cleanUserId)),
+    );
+    const activities = snapshot.docs.map(normalizeSnapshot).filter(Boolean);
+    const postResults = await Promise.all(
+      activities.map((activity) => getPostById(activity.postId)),
+    );
+    const posts = postResults
+      .map((result, index) => {
+        if (!result.success) return null;
+
+        return {
+          ...result.post,
+          activityId: activities[index].id,
+          activityText: activities[index].text || "",
+          activityType: collectionName,
+        };
+      })
+      .filter(Boolean);
+
+    return { success: true, posts };
+  } catch (error) {
+    return { success: false, error: getProfileErrorMessage(error.code) };
+  }
+}
+
+export function getLikedPosts(userId) {
+  return getPostsFromActivity("likes", userId);
+}
+
+export function getCommentedPosts(userId) {
+  return getPostsFromActivity("comments", userId);
+}
+
 function getProfileErrorMessage(code) {
   const messages = {
     "permission-denied":

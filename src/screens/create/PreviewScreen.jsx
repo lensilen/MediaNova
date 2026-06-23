@@ -31,7 +31,7 @@ function readParam(value, fallback = "") {
 export function PreviewScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { profile, user } = useAuth();
   const { error, isUploading, progress, uploadAudio, uploadImage, uploadVideo } =
     useUpload();
   const draftId = readParam(params.draftId);
@@ -50,14 +50,6 @@ export function PreviewScreen() {
   const [location, setLocation] = useState("");
   const [visibility, setVisibility] = useState("Everyone");
   const [allowComments, setAllowComments] = useState(true);
-
-  const videoSource = useMemo(
-    () => (mediaType === "video" && uri ? { uri } : null),
-    [mediaType, uri],
-  );
-  const player = useVideoPlayer(videoSource, (nextPlayer) => {
-    nextPlayer.loop = true;
-  });
 
   function buildEditMeta() {
     return {
@@ -125,6 +117,11 @@ export function PreviewScreen() {
       caption,
       {
         allowComments,
+        author: {
+          displayName: profile?.displayName || user.displayName || "",
+          email: profile?.email || user.email || "",
+          photoURL: profile?.photoURL || user.photoURL || "",
+        },
         editMeta,
         location,
         title,
@@ -182,7 +179,7 @@ export function PreviewScreen() {
     if (mediaType === "video" && uri) {
       return (
         <View style={styles.mediaThumb}>
-          <VideoView contentFit="cover" player={player} style={styles.mediaImage} />
+          <PostVideoPreview uri={uri} />
           <StickerOverlay compact sticker={selectedSticker} />
         </View>
       );
@@ -267,14 +264,6 @@ export function PreviewScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.rowSubText}>Share to</Text>
-            <View style={styles.shareRow}>
-              {["link-outline", "logo-twitter", "logo-instagram"].map((icon) => (
-                <Pressable key={icon} style={styles.shareButton}>
-                  <Ionicons name={icon} size={18} color={colors.primary} />
-                </Pressable>
-              ))}
-            </View>
             <View style={styles.progressTrack}>
               <View
                 style={[
@@ -305,6 +294,15 @@ export function PreviewScreen() {
       </View>
     </SafeAreaView>
   );
+}
+
+function PostVideoPreview({ uri }) {
+  const source = useMemo(() => ({ uri }), [uri]);
+  const player = useVideoPlayer(source, (nextPlayer) => {
+    nextPlayer.loop = true;
+  });
+
+  return <VideoView contentFit="cover" player={player} style={styles.mediaImage} />;
 }
 
 function PostRow({ icon, onPress, title, value }) {

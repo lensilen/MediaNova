@@ -5,6 +5,7 @@ import {
   StyleSheet,
   View,
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   Share,
@@ -15,7 +16,9 @@ import { useFocusEffect, usePathname, useRouter } from "expo-router";
 
 import { VideoCard } from "../../components/home/VideoCard";
 import { colors } from "../../constants/theme";
+import { useAuth } from "../../hooks/useAuth";
 import { useFeed } from "../../hooks/useFeed";
+import { getNotifications, markNotificationAsRead } from "../../utils/notifications";
 
 const dummyVideos = [
   {
@@ -38,6 +41,7 @@ const dummyVideos = [
 export default function FeedScreen() {
   const listRef = useRef(null);
   const router = useRouter();
+  const { user } = useAuth();
   const pathname = usePathname();
   const isFocused = pathname === "/";
   const {
@@ -59,6 +63,9 @@ export default function FeedScreen() {
   const [activeId, setActiveId] = useState(
     feedPosts[0]?.id || ""
   );
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationLoading, setNotificationLoading] = useState(false);
   const activePostId = feedPosts.some((post) => post.id === activeId)
     ? activeId
     : feedPosts[0]?.id || "";
@@ -129,6 +136,32 @@ export default function FeedScreen() {
     [activePostId, handleShare, isFocused]
   );
 
+  const openNotifications = useCallback(async () => {
+    if (!user?.uid) {
+      Alert.alert("Login dibutuhkan", "Masuk dulu untuk melihat notifikasi.");
+      return;
+    }
+
+    setNotificationVisible(true);
+    setNotificationLoading(true);
+
+    const result = await getNotifications(user.uid);
+
+    if (result.success) {
+      setNotifications(result.notifications);
+      result.notifications
+        .filter((item) => item.read === false)
+        .slice(0, 10)
+        .forEach((item) => {
+          markNotificationAsRead(item.id);
+        });
+    } else {
+      Alert.alert("Notifikasi gagal", result.error);
+    }
+
+    setNotificationLoading(false);
+  }, [user]);
+
   useFocusEffect(
     useCallback(() => {
       loadFeed({ refresh: true });
@@ -155,11 +188,13 @@ export default function FeedScreen() {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Ionicons
-          name="notifications-outline"
-          size={22}
-          color="#FFFFFF"
-        />
+        <Pressable onPress={openNotifications}>
+          <Ionicons
+            name="notifications-outline"
+            size={22}
+            color="#FFFFFF"
+          />
+        </Pressable>
 
         <Text style={styles.logo}>
           MediaNova
@@ -210,7 +245,67 @@ export default function FeedScreen() {
         maxToRenderPerBatch={2}
         windowSize={3}
       />
+
+      <NotificationModal
+        isLoading={notificationLoading}
+        notifications={notifications}
+        onClose={() => setNotificationVisible(false)}
+        visible={notificationVisible}
+      />
     </View>
+  );
+}
+
+function getNotificationText(item) {
+  const actor = item?.fromUserId ? `User ${item.fromUserId.slice(0, 6)}` : "Seseorang";
+
+  switch (item?.type) {
+    case "follow":
+      return `${actor} mulai follow akun kamu.`;
+    case "like":
+      return `${actor} menyukai media kamu.`;
+    case "comment":
+      return `${actor} memberi komentar di media kamu.`;
+    case "save":
+      return `${actor} menyimpan media kamu.`;
+    case "mention":
+      return `${actor} mention/tag akun kamu.`;
+    default:
+      return "Ada aktivitas baru di MediaNova.";
+  }
+}
+
+function NotificationModal({ isLoading, notifications, onClose, visible }) {
+  return (
+    <Modal animationType="slide" transparent visible={visible}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.notificationSheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Notifications</Text>
+            <Pressable onPress={onClose}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </Pressable>
+          </View>
+
+          {isLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : notifications.length ? (
+            notifications.map((item) => (
+              <View key={item.id} style={styles.notificationRow}>
+                <Ionicons
+                  name={item.read ? "notifications-outline" : "notifications"}
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={styles.notificationText}>{getNotificationText(item)}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyNotification}>Belum ada notifikasi.</Text>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -258,6 +353,49 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#FFFFFF",
     fontSize: 12,
+    textAlign: "center",
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  notificationSheet: {
+    minHeight: 260,
+    maxHeight: "70%",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 18,
+    backgroundColor: colors.surface,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  notificationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  notificationText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  emptyNotification: {
+    color: colors.muted,
+    marginTop: 24,
     textAlign: "center",
   },
 });

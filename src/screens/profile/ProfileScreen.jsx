@@ -16,9 +16,15 @@ import { ConnectionSheet } from '../../components/profile/ConnectionSheet';
 import { PostGrid } from '../../components/profile/PostGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
-import { useSocialStore } from '../../store/useSocialStore';
 import { getUserPosts } from '../../utils/posts';
-import { getFollowers, getFollowing, getUserProfile } from '../../utils/profile';
+import {
+  getCommentedPosts,
+  getFollowers,
+  getFollowing,
+  getLikedPosts,
+  getSavedPosts,
+  getUserProfile,
+} from '../../utils/profile';
 import { followUser, isFollowing, unfollowUser } from '../../utils/social';
 import { profileStyles as styles } from './profileScreenStyles';
 
@@ -43,9 +49,9 @@ export function ProfileScreen({
   const isEmbedded = Boolean(embeddedUserId || onBackPress);
   const [profile, setVisibleProfile] = useState(null);
   const [posts, setPosts] = useState([]);
-  
-  // Ekstrak likedPosts di sini agar bisa digunakan di visiblePosts
-  const { savedPosts, likedPosts } = useSocialStore();
+  const [commentedPosts, setCommentedPosts] = useState([]);
+  const [likedPosts, setLikedPosts] = useState([]);
+  const [savedPosts, setSavedPosts] = useState([]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -96,6 +102,10 @@ export function ProfileScreen({
       );
     }
 
+    if (activeTab === "Comment") {
+      return commentedPosts;
+    }
+
     if (activeTab === "Saved") {
       return savedPosts;
     }
@@ -104,14 +114,13 @@ export function ProfileScreen({
       return likedPosts;
     }
 
-    return posts.filter(
-      (post) => post.type === "photo"
-    );
+    return posts.filter((post) => post.type === "photo");
   }, [
     activeTab,
+    commentedPosts,
+    likedPosts,
     posts,
     savedPosts,
-    likedPosts,
   ]);
 
   const loadProfile = useCallback(
@@ -128,9 +137,21 @@ export function ProfileScreen({
         setIsLoading(true);
       }
 
-      const [profileResult, postsResult, followResult] = await Promise.all([
+      const [
+        profileResult,
+        postsResult,
+        commentResult,
+        likeResult,
+        saveResult,
+        followResult,
+      ] = await Promise.all([
         getUserProfile(targetUserId),
         getUserPosts(targetUserId),
+        getCommentedPosts(targetUserId),
+        getLikedPosts(targetUserId),
+        isOwnProfile
+          ? getSavedPosts(targetUserId)
+          : Promise.resolve({ success: true, posts: [] }),
         !isOwnProfile && currentUserId
           ? isFollowing(currentUserId, targetUserId)
           : Promise.resolve({ success: true, isFollowing: false }),
@@ -148,6 +169,18 @@ export function ProfileScreen({
 
       if (postsResult.success) {
         setPosts(postsResult.posts);
+      }
+
+      if (commentResult.success) {
+        setCommentedPosts(commentResult.posts);
+      }
+
+      if (likeResult.success) {
+        setLikedPosts(likeResult.posts);
+      }
+
+      if (saveResult.success) {
+        setSavedPosts(saveResult.posts);
       }
 
       if (followResult.success) {

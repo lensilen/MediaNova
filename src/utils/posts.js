@@ -15,6 +15,7 @@ import {
 
 import { db } from "./firebase";
 import { cacheFeedPosts, getCachedFeedPosts } from "./cache";
+import { createNotification } from "./notifications";
 
 export const POST_TYPES = ["video", "audio", "photo"];
 
@@ -89,6 +90,46 @@ function sanitizePlainObject(value) {
   }, {});
 }
 
+function createHandle(value) {
+  return normalizeText(value)
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, "");
+}
+
+function extractMentions(...values) {
+  const text = values.map(normalizeText).join(" ");
+  const matches = text.match(/@[a-zA-Z0-9._]+/g) || [];
+
+  return Array.from(new Set(matches.map((item) => item.slice(1).toLowerCase())));
+}
+
+async function createMentionNotifications({ fromUserId, mentions, postId }) {
+  if (!mentions.length) return;
+
+  try {
+    const snapshot = await getDocs(collection(db, "users"));
+    const users = snapshot.docs
+      .map((userDoc) => ({ id: userDoc.id, ...userDoc.data() }))
+      .filter((profile) => {
+        const handles = [
+          createHandle(profile.email),
+          createHandle(profile.displayName),
+        ];
+
+        return handles.some((handle) => mentions.includes(handle));
+      });
+
+    await Promise.all(
+      users.map((profile) =>
+        createNotification(profile.id || profile.uid, fromUserId, "mention", postId),
+      ),
+    );
+  } catch {
+    // Mention notification is optional and should not block posting.
+  }
+}
+
 export async function createPost(
   userId,
   type,
@@ -103,8 +144,10 @@ export async function createPost(
   const cleanCaption = normalizeText(caption);
   const cleanTitle = normalizeText(metadata.title);
   const cleanLocation = normalizeText(metadata.location);
+  const author = sanitizePlainObject(metadata.author);
   const visibility = normalizeVisibility(metadata.visibility);
   const editMeta = sanitizePlainObject(metadata.editMeta);
+  const mentions = extractMentions(cleanCaption, cleanTitle);
   const validationError = validatePostPayload(cleanUserId, type, cleanMediaURL);
 
   if (validationError) {
@@ -120,6 +163,11 @@ export async function createPost(
     titleLower: cleanTitle.toLowerCase(),
     caption: cleanCaption,
     captionLower: cleanCaption.toLowerCase(),
+    username:
+      normalizeText(author.username) ||
+      createHandle(author.email || author.displayName || cleanUserId),
+    displayName: normalizeText(author.displayName),
+    photoURL: normalizeText(author.photoURL),
     location: cleanLocation,
     locationLower: cleanLocation.toLowerCase(),
     visibility,
@@ -134,6 +182,11 @@ export async function createPost(
 
   try {
     const postRef = await addDoc(collection(db, "posts"), payload);
+    await createMentionNotifications({
+      fromUserId: cleanUserId,
+      mentions,
+      postId: postRef.id,
+    });
 
     return {
       success: true,

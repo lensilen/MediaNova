@@ -248,7 +248,7 @@ export async function savePost(postId, userId) {
       }
 
       if (saveSnapshot.exists()) {
-        return { changed: false };
+        return { changed: false, toUserId: postSnapshot.data().userId };
       }
 
       transaction.set(saveRef, {
@@ -261,8 +261,17 @@ export async function savePost(postId, userId) {
         updatedAt: serverTimestamp(),
       });
 
-      return { changed: true };
+      return { changed: true, toUserId: postSnapshot.data().userId };
     });
+
+    if (transactionResult.changed) {
+      await createNotification(
+        transactionResult.toUserId,
+        validation.userId,
+        "save",
+        validation.postId,
+      );
+    }
 
     return {
       success: true,

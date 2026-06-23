@@ -16,7 +16,7 @@ import {
 
 import { db } from "./firebase";
 
-const NOTIFICATION_TYPES = ["like", "comment", "follow"];
+const NOTIFICATION_TYPES = ["like", "comment", "follow", "mention", "save"];
 const DEFAULT_NOTIFICATION_LIMIT = 50;
 const EXPO_GO_NOTIFICATION_MESSAGE =
   "Notifikasi masih local dulu untuk Expo Go.";

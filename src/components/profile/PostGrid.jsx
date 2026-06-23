@@ -30,9 +30,20 @@ function getIconName(type) {
     case "audio":
       return "musical-notes";
 
+    case "comment":
+      return "chatbubble";
+
     default:
       return "image";
   }
+}
+
+function getCaption(post) {
+  if (post?.activityType === "comments" && post.activityText) {
+    return post.activityText;
+  }
+
+  return post?.caption || "MediaNova";
 }
 
 export function PostGrid({
@@ -142,8 +153,7 @@ export function PostGrid({
                     },
                   ]}
                 >
-                  {post.caption ||
-                    "MediaNova"}
+                  {getCaption(post)}
                 </Text>
               </View>
             )}
