@@ -13,7 +13,6 @@
     "expo-asset": "~56.0.17",
     "expo-audio": "~56.0.12",
     "expo-auth-session": "~56.0.14",
-    "expo-av": "^16.0.8",
     "expo-blur": "~56.0.3",
     "expo-camera": "~56.0.8",
     "expo-constants": "~56.0.18",
@@ -34,7 +33,6 @@
     "expo-video": "~56.1.4",
     "expo-video-thumbnails": "~56.0.3",
     "expo-web-browser": "~56.0.5",
-    "ffmpeg-kit-react-native": "^6.0.2",
     "firebase": "^12.15.0",
     "jpeg-js": "^0.4.4",
     "react": "19.2.3",
@@ -58,6 +56,17 @@
   "devDependencies": {
     "eslint": "^9.0.0",
     "eslint-config-expo": "~56.0.4"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-compressor",
+          "react-native-nitro-image",
+          "react-native-vision-camera-face-detector"
+        ]
+      }
+    }
   },
   "scripts": {
     "start": "expo start",
