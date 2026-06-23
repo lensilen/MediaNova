@@ -18,7 +18,8 @@ import { useGoogleAuth } from "../../utils/googleAuth";
 export default function LoginScreen() {
   const router = useRouter();
   const { clearError, error, isAuthenticated, isLoading, login, loginGoogle } = useAuth();
-  const [googleRequest, googleResponse, promptGoogleLogin] = useGoogleAuth();
+  const [googleRequest, googleResponse, promptGoogleLogin, isGoogleConfigured] =
+    useGoogleAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState("");
@@ -90,6 +91,11 @@ export default function LoginScreen() {
   async function handleGoogleLogin() {
     resetErrors();
 
+    if (!isGoogleConfigured) {
+      setFormError("Google Login belum dikonfigurasi. Pakai email dulu.");
+      return;
+    }
+
     if (!googleRequest) {
       setFormError("Google Login belum siap. Coba lagi sebentar.");
       return;
@@ -151,16 +157,21 @@ export default function LoginScreen() {
           </Pressable>
 
           <Pressable
-            disabled={isBusy || !googleRequest}
+            disabled={isBusy || !isGoogleConfigured || !googleRequest}
             onPress={handleGoogleLogin}
             style={[
               styles.googleButton,
-              (isBusy || !googleRequest) && styles.buttonDisabled,
+              (isBusy || !isGoogleConfigured || !googleRequest) &&
+                styles.buttonDisabled,
             ]}>
             {isGoogleLoading ? (
               <ActivityIndicator color={colors.text} />
             ) : (
-              <Text style={styles.googleButtonText}>Login dengan Google</Text>
+              <Text style={styles.googleButtonText}>
+                {isGoogleConfigured
+                  ? "Login dengan Google"
+                  : "Google Login belum tersedia"}
+              </Text>
             )}
           </Pressable>
         </View>
