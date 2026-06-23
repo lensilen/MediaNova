@@ -59,8 +59,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "cf34ce6d-57b1-434a-8d80-581c56223c21"
+        "projectId": "a1e08572-b69b-4f47-aeb4-c8d6717cc9b6"
       }
-    }
+    },
+    "owner": "lensilen"
   }
 }
