@@ -5,7 +5,6 @@ import { colors } from "../../constants/theme";
 
 const tabIcons = {
   index: ["home", "home-outline"],
-  search: ["search", "search-outline"],
   add: ["add-circle", "add-circle-outline"],
   profile: ["person", "person-outline"],
 };
@@ -45,14 +44,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons
-              color={color}
-              name={getTabIcon("search", focused)}
-              size={size}
-            />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen

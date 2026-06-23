@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -8,30 +9,28 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useRouter } from "expo-router"; // 1. Gunakan useRouter dari expo-router
 
 import { ActionButtons } from "./ActionButtons";
 import { CommentSheet } from "./CommentSheet";
+import { useAuth } from "../../hooks/useAuth";
+import {
+  formatTime,
+  waveformBars,
+} from "../../screens/create/createOptions";
+import {
+  isLiked,
+  isSaved,
+  likePost,
+  savePost,
+  unlikePost,
+  unsavePost,
+} from "../../utils/socialPosts";
 import { colors } from "../../constants/theme";
-import { useSocialStore } from "../../store/useSocialStore";
 
 const { height } = Dimensions.get("window");
-
-const dummyComments = [
-  {
-    id: "1",
-    name: "Sarah Jenkins",
-    text: "This layout is amazing.",
-    avatar: "https://i.pravatar.cc/150?img=11",
-  },
-  {
-    id: "2",
-    name: "David Chen",
-    text: "Looks clean and modern.",
-    avatar: "https://i.pravatar.cc/150?img=12",
-  },
-];
 
 export function VideoCard({
   post,
@@ -42,31 +41,64 @@ export function VideoCard({
 }) {
   const router = useRouter(); // 2. Inisialisasi router
   const wasActiveRef = useRef(false);
+  const { user } = useAuth();
+  const mediaUrl = post?.mediaURL || "https://www.w3schools.com/html/mov_bbb.mp4";
+  const isAudioPost = post?.type === "audio";
+  const isPhotoPost = post?.type === "photo";
+  const isVideoPost = !isAudioPost && !isPhotoPost;
 
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [commentCount, setCommentCount] = useState(dummyComments.length);
+  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [likeCount, setLikeCount] = useState(post?.likes || 0);
+  const [saveCount, setSaveCount] = useState(post?.saves || 0);
+  const [commentCount, setCommentCount] = useState(
+    post?.commentsCount ?? post?.comments ?? 0
+  );
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const { likedPosts, savedPosts, toggleLike, toggleSave } = useSocialStore();
-
-  const liked = likedPosts.some((item) => item.id === post.id);
-  const saved = savedPosts.some((item) => item.id === post.id);
-
-  const displayedLikes = (post?.likes || 0) + (liked ? 1 : 0);
-  const displayedSaves = (post?.saves || 0) + (saved ? 1 : 0);
-
   const player = useVideoPlayer(
-    post?.mediaURL || "https://www.w3schools.com/html/mov_bbb.mp4",
+    isVideoPost ? mediaUrl : null,
     (videoPlayer) => {
       videoPlayer.loop = true;
       videoPlayer.muted = false;
     }
   );
+  const audioPlayer = useAudioPlayer(isAudioPost ? mediaUrl : null);
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
 
   useEffect(() => {
-    if (!player) return;
+    let isActiveCard = true;
+
+    async function loadSocialState() {
+      if (!post?.id || post?.isDemo || !user?.uid) {
+        setLiked(false);
+        setSaved(false);
+        return;
+      }
+
+      const [likedResult, savedResult] = await Promise.all([
+        isLiked(post.id, user.uid),
+        isSaved(post.id, user.uid),
+      ]);
+
+      if (!isActiveCard) return;
+
+      if (likedResult.success) setLiked(likedResult.isLiked);
+      if (savedResult.success) setSaved(savedResult.isSaved);
+    }
+
+    loadSocialState();
+
+    return () => {
+      isActiveCard = false;
+    };
+  }, [post?.id, post?.isDemo, user?.uid]);
+
+  useEffect(() => {
+    if (!isVideoPost || !player) return;
 
     if (isActive && !isPaused) {
       player.play();
@@ -85,10 +117,10 @@ export function VideoCard({
     }
 
     wasActiveRef.current = isActive;
-  }, [player, isActive, isPaused]);
+  }, [isActive, isPaused, isVideoPost, player]);
 
   useEffect(() => {
-    if (!player) return;
+    if (!isVideoPost || !player) return;
 
     const interval = setInterval(() => {
       try {
@@ -100,10 +132,46 @@ export function VideoCard({
     }, 250);
 
     return () => clearInterval(interval);
-  }, [player]);
+  }, [isVideoPost, player]);
 
-  const handleVideoPress = () => {
-    if (!player) return;
+  useEffect(() => {
+    if (!isAudioPost) return;
+
+    const timer = setInterval(() => {
+      const current = audioStatus?.currentTime || 0;
+      const duration = audioStatus?.duration || audioStatus?.durationMillis / 1000 || 1;
+
+      setProgress(duration > 0 ? current / duration : 0);
+      setIsPaused(!audioStatus?.playing);
+    }, 250);
+
+    return () => clearInterval(timer);
+  }, [
+    audioStatus?.currentTime,
+    audioStatus?.duration,
+    audioStatus?.durationMillis,
+    audioStatus?.playing,
+    isAudioPost,
+  ]);
+
+  useEffect(() => {
+    if (isAudioPost && !isActive) {
+      audioPlayer.pause();
+    }
+  }, [audioPlayer, isActive, isAudioPost]);
+
+  const handleMediaPress = () => {
+    if (isAudioPost) {
+      if (audioStatus?.playing) {
+        audioPlayer.pause();
+      } else {
+        audioPlayer.play();
+      }
+
+      return;
+    }
+
+    if (!isVideoPost || !player) return;
 
     if (isPaused) {
       player.play();
@@ -113,6 +181,62 @@ export function VideoCard({
 
     setIsPaused(!isPaused);
   };
+
+  async function handleLike() {
+    if (post?.isDemo) {
+      const nextLiked = !liked;
+      setLiked(nextLiked);
+      setLikeCount((value) => Math.max(value + (nextLiked ? 1 : -1), 0));
+      return;
+    }
+
+    if (!user?.uid) {
+      Alert.alert("Login dibutuhkan", "Masuk dulu sebelum like post.");
+      return;
+    }
+
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikeCount((value) => Math.max(value + (nextLiked ? 1 : -1), 0));
+
+    const result = nextLiked
+      ? await likePost(post.id, user.uid)
+      : await unlikePost(post.id, user.uid);
+
+    if (!result.success) {
+      setLiked(!nextLiked);
+      setLikeCount((value) => Math.max(value + (nextLiked ? -1 : 1), 0));
+      Alert.alert("Like gagal", result.error);
+    }
+  }
+
+  async function handleSave() {
+    if (post?.isDemo) {
+      const nextSaved = !saved;
+      setSaved(nextSaved);
+      setSaveCount((value) => Math.max(value + (nextSaved ? 1 : -1), 0));
+      return;
+    }
+
+    if (!user?.uid) {
+      Alert.alert("Login dibutuhkan", "Masuk dulu sebelum save post.");
+      return;
+    }
+
+    const nextSaved = !saved;
+    setSaved(nextSaved);
+    setSaveCount((value) => Math.max(value + (nextSaved ? 1 : -1), 0));
+
+    const result = nextSaved
+      ? await savePost(post.id, user.uid)
+      : await unsavePost(post.id, user.uid);
+
+    if (!result.success) {
+      setSaved(!nextSaved);
+      setSaveCount((value) => Math.max(value + (nextSaved ? -1 : 1), 0));
+      Alert.alert("Save gagal", result.error);
+    }
+  }
 
   // 3. Fungsi Navigasi yang disesuaikan untuk Expo Router
   // Cari fungsi ini di dalam VideoCard.jsx milikmu
@@ -124,21 +248,70 @@ export function VideoCard({
     });
   };
 
+  const currentSeconds = isAudioPost
+    ? audioStatus?.currentTime || 0
+    : player?.currentTime || 0;
+  const durationSeconds = isAudioPost
+    ? audioStatus?.duration || audioStatus?.durationMillis / 1000 || 0
+    : player?.duration || 0;
+
   return (
     <View style={styles.container}>
-      <Pressable style={styles.videoWrapper} onPress={handleVideoPress}>
-        <VideoView
-          player={player}
-          style={styles.video}
-          nativeControls={false}
-          contentFit="cover"
-        />
+      <Pressable style={styles.videoWrapper} onPress={handleMediaPress}>
+        {isVideoPost ? (
+          <>
+            <VideoView
+              player={player}
+              style={styles.video}
+              nativeControls={false}
+              contentFit="cover"
+            />
 
-        {isPaused && (
-          <View style={styles.pauseOverlay}>
-            <Ionicons name="pause" size={60} color="#FFFFFF" />
+            {isPaused && (
+              <View style={styles.pauseOverlay}>
+                <Ionicons name="pause" size={60} color="#FFFFFF" />
+              </View>
+            )}
+          </>
+        ) : null}
+
+        {isAudioPost ? (
+          <View style={styles.audioSurface}>
+            <View style={styles.audioDisc}>
+              <Ionicons name="mic" size={34} color="#FFFFFF" />
+            </View>
+            <Text style={styles.audioTitle}>{post?.title || "Voice note"}</Text>
+            <View style={styles.audioWave}>
+              {waveformBars.map((height, index) => (
+                <View
+                  key={`${height}-${index}`}
+                  style={[
+                    styles.audioBar,
+                    {
+                      height: Math.max(12, height + 8),
+                      opacity: progress * waveformBars.length >= index ? 1 : 0.38,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.audioPlayBadge}>
+              <Ionicons
+                name={audioStatus?.playing ? "pause" : "play"}
+                size={28}
+                color="#FFFFFF"
+              />
+            </View>
           </View>
-        )}
+        ) : null}
+
+        {isPhotoPost ? (
+          <Image
+            source={{ uri: mediaUrl }}
+            style={styles.video}
+            resizeMode="cover"
+          />
+        ) : null}
       </Pressable>
 
       <View style={styles.overlay}>
@@ -174,23 +347,23 @@ export function VideoCard({
       </View>
 
       <ActionButtons
-        likes={displayedLikes}
+        likes={likeCount}
         comments={commentCount}
-        saves={displayedSaves}
+        saves={saveCount}
         liked={liked}
         saved={saved}
-        onLike={() => toggleLike(post)}
+        onLike={handleLike}
         onComment={() => {
           setShowComments(true);
           onComment?.(post);
         }}
-        onSave={() => toggleSave(post)}
+        onSave={handleSave}
         onShare={() => onShare?.(post)}
       />
 
       <View style={styles.timelineWrapper}>
         <Text style={styles.timeText}>
-          {Math.floor(player?.currentTime || 0)}
+          {formatTime(currentSeconds)}
         </Text>
 
         <View style={styles.progressContainer}>
@@ -205,14 +378,15 @@ export function VideoCard({
         </View>
 
         <Text style={styles.timeText}>
-          {Math.floor(player?.duration || 0)}
+          {formatTime(durationSeconds)}
         </Text>
       </View>
 
       <CommentSheet
         visible={showComments}
         onClose={() => setShowComments(false)}
-        comments={dummyComments}
+        comments={[]}
+        postId={post.id}
         onCommentAdded={() => setCommentCount((prev) => prev + 1)}
       />
     </View>
@@ -223,6 +397,50 @@ const styles = StyleSheet.create({
   container: { height: height, backgroundColor: "#000" },
   videoWrapper: { flex: 1 },
   video: { position: "absolute", width: "100%", height: "100%" },
+  audioSurface: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    backgroundColor: "#121820",
+  },
+  audioDisc: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    backgroundColor: colors.primary,
+  },
+  audioTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+    marginBottom: 22,
+    textAlign: "center",
+  },
+  audioWave: {
+    minHeight: 80,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  audioBar: {
+    width: 7,
+    borderRadius: 4,
+    marginHorizontal: 3,
+    backgroundColor: colors.secondary,
+  },
+  audioPlayBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 28,
+    backgroundColor: "rgba(255,255,255,0.16)",
+  },
   pauseOverlay: {
     position: "absolute",
     top: "50%",

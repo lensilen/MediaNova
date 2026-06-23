@@ -27,11 +27,21 @@ service cloud.firestore {
           request.resource.data.commentsCount == resource.data.commentsCount + 1 ||
           request.resource.data.commentsCount == resource.data.commentsCount
         );
+      let currentSaves = resource.data.keys().hasAny(['saves']) ? resource.data.saves : 0;
+      let savesValid =
+        !changedKeys.hasAny(['saves']) ||
+        request.resource.data.saves >= 0 &&
+        (
+          request.resource.data.saves == currentSaves + 1 ||
+          request.resource.data.saves == currentSaves - 1 ||
+          request.resource.data.saves == currentSaves
+        );
 
       return signedIn() &&
-        changedKeys.hasOnly(['likes', 'commentsCount', 'updatedAt']) &&
+        changedKeys.hasOnly(['likes', 'commentsCount', 'saves', 'updatedAt']) &&
         likesValid &&
-        commentsValid;
+        commentsValid &&
+        savesValid;
     }
 
     function userCounterUpdateOnly() {

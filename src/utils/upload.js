@@ -2,6 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 
 import { storage } from "./firebase";
+import { isCloudinaryConfigured, uploadToCloudinary } from "./cloudinary";
 import { compressImage, compressVideo, createVideoThumbnail } from "./compress";
 
 const TEN_MB = 10 * 1024 * 1024;
@@ -216,6 +217,32 @@ export async function uploadImage(uri, onProgress, options = {}) {
     return compressed;
   }
 
+  if (isCloudinaryConfigured()) {
+    const cloudinaryResult = await uploadToCloudinary(
+      compressed.uri,
+      "photo",
+      onProgress,
+      {
+        folder: options.folder || "medianova/posts/images",
+        metadata: {
+          originalUri: compressed.originalUri,
+          width: String(compressed.width || 0),
+          height: String(compressed.height || 0),
+          ...options.metadata,
+        },
+      },
+    );
+
+    return {
+      ...cloudinaryResult,
+      originalUri: compressed.originalUri,
+      uploadProvider: "cloudinary",
+      uploadUri: compressed.uri,
+      width: compressed.width,
+      height: compressed.height,
+    };
+  }
+
   const result = await uploadFile({
     uri: compressed.uri,
     onProgress,
@@ -240,6 +267,16 @@ export async function uploadImage(uri, onProgress, options = {}) {
 }
 
 export async function uploadAudio(uri, onProgress, options = {}) {
+  if (isCloudinaryConfigured()) {
+    return uploadToCloudinary(uri, "audio", onProgress, {
+      folder: options.folder || "medianova/posts/audio",
+      metadata: {
+        mediaType: "audio",
+        ...options.metadata,
+      },
+    });
+  }
+
   return uploadChunked(uri, onProgress, {
     folder: options.folder || "posts/audio",
     fallbackExtension: "m4a",
@@ -259,6 +296,32 @@ export async function uploadVideo(uri, onProgress, options = {}) {
   }
 
   const uploadMode = compressed.size > TEN_MB ? "resumable-large" : "resumable";
+
+  if (isCloudinaryConfigured()) {
+    const cloudinaryResult = await uploadToCloudinary(
+      compressed.uri,
+      "video",
+      onProgress,
+      {
+        folder: options.folder || "medianova/posts/videos",
+        metadata: {
+          mediaType: "video",
+          uploadMode,
+          originalUri: compressed.originalUri,
+          ...options.metadata,
+        },
+      },
+    );
+
+    return {
+      ...cloudinaryResult,
+      originalUri: compressed.originalUri,
+      uploadMode,
+      uploadProvider: "cloudinary",
+      uploadUri: compressed.uri,
+    };
+  }
+
   const videoResult = await uploadChunked(compressed.uri, onProgress, {
     folder: options.folder || "posts/videos",
     fallbackExtension: "mp4",

@@ -1,21 +1,12 @@
 import { CameraView } from "expo-camera";
 import { useEffect } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 
 import { StickerOverlay } from "../../components/editor/StickerOverlay";
-import { colors } from "../../constants/theme";
 import { AudioCapturePanel } from "./AudioCapturePanel";
 import { CameraPermissionPanel } from "./CameraPermissionPanel";
 import { noSticker } from "./createOptions";
 import { createStyles as styles } from "./createStyles";
-
-let NativeFaceFilterCamera = null;
-
-try {
-  NativeFaceFilterCamera = require("./FaceFilterCamera").FaceFilterCamera;
-} catch {
-  NativeFaceFilterCamera = null;
-}
 
 export function RecorderCameraView({
   cameraRef,
@@ -30,7 +21,7 @@ export function RecorderCameraView({
   selectedSticker = noSticker,
   useFaceCamera,
 }) {
-  const useStaticStickerFallback = useFaceCamera && !NativeFaceFilterCamera;
+  const useStaticStickerFallback = useFaceCamera;
   const canUseTorch = facing === "back" && mode === "video" && flashMode === "on";
   const safeFlashMode = facing === "back" ? flashMode : "off";
 
@@ -72,40 +63,20 @@ export function RecorderCameraView({
   }
 
   if (useFaceCamera) {
-    if (!NativeFaceFilterCamera) {
-      return (
-        <View style={styles.camera}>
-          <CameraView
-            ref={cameraRef}
-            enableTorch={canUseTorch}
-            facing={facing}
-            flash={safeFlashMode}
-            mode={mode === "photo" ? "picture" : "video"}
-            onCameraReady={onReady}
-            style={styles.camera}
-            videoQuality="720p"
-          />
-          <StickerOverlay compact sticker={selectedSticker} />
-          <View pointerEvents="none" style={styles.faceStatus}>
-            <View style={[styles.faceStatusDot, { backgroundColor: colors.warning }]} />
-            <Text style={styles.faceStatusText}>Tracking aktif di dev build</Text>
-          </View>
-        </View>
-      );
-    }
-
     return (
-      <NativeFaceFilterCamera
-        active
-        facing={facing}
-        flashMode={flashMode}
-        mode={mode}
-        onControlsReady={(controls) => {
-          faceCameraRef.current = controls;
-        }}
-        onReady={onReady}
-        selectedSticker={selectedSticker}
-      />
+      <View style={styles.camera}>
+        <CameraView
+          ref={cameraRef}
+          enableTorch={canUseTorch}
+          facing={facing}
+          flash={safeFlashMode}
+          mode={mode === "photo" ? "picture" : "video"}
+          onCameraReady={onReady}
+          style={styles.camera}
+          videoQuality="720p"
+        />
+        <StickerOverlay compact sticker={selectedSticker} />
+      </View>
     );
   }
 

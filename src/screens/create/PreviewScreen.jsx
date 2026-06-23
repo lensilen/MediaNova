@@ -110,6 +110,13 @@ export function PreviewScreen() {
 
     if (!uploadResult.success) return;
 
+    const editMeta = {
+      ...buildEditMeta(),
+      originalMediaURL: uploadResult.originalURL || uploadResult.downloadURL,
+      publicId: uploadResult.publicId || uploadResult.path || "",
+      uploadProvider: uploadResult.uploadProvider || "firebase",
+    };
+
     const postResult = await createPost(
       user.uid,
       mediaType,
@@ -118,7 +125,7 @@ export function PreviewScreen() {
       caption,
       {
         allowComments,
-        editMeta: buildEditMeta(),
+        editMeta,
         location,
         title,
         visibility: visibility.toLowerCase(),

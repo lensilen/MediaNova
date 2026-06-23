@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Modal,
   View,
   Text,
@@ -11,15 +13,19 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../hooks/useAuth";
+import { addComment, getComments } from "../../utils/socialPosts";
 
 export function CommentSheet({ 
   visible, 
   onClose, 
   comments = [], 
+  postId = "",
   onCommentAdded 
 }) {
   const [commentText, setCommentText] = useState("");
   const [localComments, setLocalComments] = useState(comments);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const { user, profile } = useAuth();
   
@@ -31,22 +37,65 @@ export function CommentSheet({
   const defaultAvatar = `https://ui-avatars.com/api/?name=${currentUserName}&background=2E3748&color=FFFFFF`;
   const currentUserAvatar = profile?.photoURL || user?.photoURL || defaultAvatar;
 
-  const handleAddComment = () => {
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadComments() {
+      if (!visible || !postId) return;
+
+      setIsLoading(true);
+      const result = await getComments(postId);
+
+      if (!isActive) return;
+
+      if (result.success) {
+        setLocalComments(result.comments);
+      } else {
+        setLocalComments(comments);
+      }
+
+      setIsLoading(false);
+    }
+
+    loadComments();
+
+    return () => {
+      isActive = false;
+    };
+  }, [comments, postId, visible]);
+
+  const handleAddComment = async () => {
     if (!commentText.trim()) return;
 
-    const newComment = {
-      id: Date.now().toString(),
-      name: currentUserName,
-      text: commentText,
-      avatar: currentUserAvatar,
-    };
-
-    setLocalComments([...localComments, newComment]);
-    setCommentText("");
-    
-    if (onCommentAdded) {
-      onCommentAdded();
+    if (!user?.uid) {
+      Alert.alert("Login dibutuhkan", "Masuk dulu sebelum komentar.");
+      return;
     }
+
+    setIsSending(true);
+    const cleanText = commentText.trim();
+    const result = await addComment(postId, user.uid, cleanText, {
+      displayName: currentUserName,
+      photoURL: currentUserAvatar,
+    });
+
+    if (result.success) {
+      setLocalComments((items) => [
+        ...items,
+        {
+          ...result.comment,
+          displayName: currentUserName,
+          photoURL: currentUserAvatar,
+          text: cleanText,
+        },
+      ]);
+      setCommentText("");
+      onCommentAdded?.(result.comment);
+    } else {
+      Alert.alert("Komentar gagal", result.error);
+    }
+
+    setIsSending(false);
   };
 
   return (
@@ -74,27 +123,48 @@ export function CommentSheet({
             </Pressable>
           </View>
 
-          <FlatList
-            data={localComments}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.commentRow}>
-                <Image
-                  source={{ uri: item.avatar }}
-                  style={styles.avatar}
-                />
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color="#2E3748" />
+              <Text style={styles.loadingText}>Memuat komentar...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={localComments}
+              keyExtractor={(item) => item.id}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Belum ada komentar.</Text>
+              }
+              renderItem={({ item }) => {
+                const name =
+                  item.displayName ||
+                  item.name ||
+                  (item.userId ? item.userId.slice(0, 8) : "User");
+                const avatar =
+                  item.photoURL ||
+                  item.avatar ||
+                  `https://ui-avatars.com/api/?name=${name}&background=2E3748&color=FFFFFF`;
 
-                <View style={styles.commentContent}>
-                  <Text style={styles.commentName}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.commentText}>
-                    {item.text}
-                  </Text>
-                </View>
-              </View>
-            )}
-          />
+                return (
+                  <View style={styles.commentRow}>
+                    <Image
+                      source={{ uri: avatar }}
+                      style={styles.avatar}
+                    />
+
+                    <View style={styles.commentContent}>
+                      <Text style={styles.commentName}>
+                        {name}
+                      </Text>
+                      <Text style={styles.commentText}>
+                        {item.text}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          )}
 
           <View style={styles.inputRow}>
             <Image 
@@ -109,12 +179,16 @@ export function CommentSheet({
               style={styles.input}
             />
 
-            <Pressable onPress={handleAddComment}>
-              <Ionicons
-                name="send"
-                size={24}
-                color="#1E88E5"
-              />
+            <Pressable disabled={isSending} onPress={handleAddComment}>
+              {isSending ? (
+                <ActivityIndicator color="#1E88E5" />
+              ) : (
+                <Ionicons
+                  name="send"
+                  size={24}
+                  color="#1E88E5"
+                />
+              )}
             </Pressable>
           </View>
         </View>
@@ -194,5 +268,19 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 15,
     marginRight: 10,
+  },
+  loadingBox: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "#666",
+    marginTop: 8,
+  },
+  emptyText: {
+    color: "#777",
+    marginTop: 24,
+    textAlign: "center",
   },
 });

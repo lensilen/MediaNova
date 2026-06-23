@@ -126,6 +126,7 @@ export async function createPost(
     allowComments: metadata.allowComments !== false,
     editMeta,
     likes: 0,
+    saves: 0,
     commentsCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

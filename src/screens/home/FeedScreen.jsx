@@ -5,14 +5,17 @@ import {
   StyleSheet,
   View,
   ActivityIndicator,
+  Pressable,
+  RefreshControl,
   Share,
   Text,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, usePathname } from "expo-router";
+import { useFocusEffect, usePathname, useRouter } from "expo-router";
 
 import { VideoCard } from "../../components/home/VideoCard";
 import { colors } from "../../constants/theme";
+import { useFeed } from "../../hooks/useFeed";
 
 const dummyVideos = [
   {
@@ -34,11 +37,31 @@ const dummyVideos = [
 
 export default function FeedScreen() {
   const listRef = useRef(null);
+  const router = useRouter();
   const pathname = usePathname();
   const isFocused = pathname === "/";
-  const [activeId, setActiveId] = useState(
-    dummyVideos[0].id
+  const {
+    posts,
+    hasMore,
+    isLoading,
+    isRefreshing,
+    error,
+    loadFeed,
+    loadMore,
+  } = useFeed({ pageSize: 8 });
+  const feedPosts = useMemo(
+    () =>
+      posts.length
+        ? posts
+        : dummyVideos.map((video) => ({ ...video, isDemo: true })),
+    [posts],
   );
+  const [activeId, setActiveId] = useState(
+    feedPosts[0]?.id || ""
+  );
+  const activePostId = feedPosts.some((post) => post.id === activeId)
+    ? activeId
+    : feedPosts[0]?.id || "";
 
   const handleShare = useCallback(async (post) => {
     const caption = post?.caption || "MediaNova post";
@@ -81,7 +104,7 @@ export default function FeedScreen() {
     ({ item }) => (
       <VideoCard
         post={item}
-        isActive={isFocused && activeId === item.id}
+        isActive={isFocused && activePostId === item.id}
         onProfilePress={() => {
           console.log(
             "Profile:",
@@ -103,19 +126,21 @@ export default function FeedScreen() {
         onShare={handleShare}
       />
     ),
-    [activeId, handleShare, isFocused]
+    [activePostId, handleShare, isFocused]
   );
 
   useFocusEffect(
     useCallback(() => {
+      loadFeed({ refresh: true });
+
       return () => {
         setActiveId(dummyVideos[0]?.id || "");
         listRef.current?.scrollToOffset?.({ animated: false, offset: 0 });
       };
-    }, []),
+    }, [loadFeed]),
   );
 
-  if (!dummyVideos.length) {
+  if (isLoading && !feedPosts.length) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator
@@ -140,21 +165,40 @@ export default function FeedScreen() {
           MediaNova
         </Text>
 
-        <Ionicons
-          name="search-outline"
-          size={22}
-          color="#FFFFFF"
-        />
+        <Pressable onPress={() => router.push("/search")}>
+          <Ionicons
+            name="search-outline"
+            size={22}
+            color="#FFFFFF"
+          />
+        </Pressable>
       </View>
+
+      {error ? (
+        <View style={styles.errorPill}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
 
       {/* FEED */}
       <FlatList
         ref={listRef}
-        data={dummyVideos}
+        data={feedPosts}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         pagingEnabled
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => loadFeed({ refresh: true })}
+            tintColor="#FFFFFF"
+          />
+        }
+        onEndReached={() => {
+          if (hasMore) loadMore();
+        }}
+        onEndReachedThreshold={0.5}
         onViewableItemsChanged={
           onViewableItemsChanged
         }
@@ -200,5 +244,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor:
       colors.background,
+  },
+  errorPill: {
+    left: 24,
+    position: "absolute",
+    right: 24,
+    top: 72,
+    zIndex: 1000,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    padding: 10,
+  },
+  errorText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    textAlign: "center",
   },
 });

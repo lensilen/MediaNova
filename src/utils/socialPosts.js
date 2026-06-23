@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -9,7 +8,6 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  setDoc,
   where,
 } from "firebase/firestore";
 
@@ -148,9 +146,11 @@ export async function isLiked(postId, userId) {
   }
 }
 
-export async function addComment(postId, userId, text) {
+export async function addComment(postId, userId, text, author = {}) {
   const validation = validatePostUser(postId, userId);
   const cleanText = normalizeText(text);
+  const displayName = normalizeText(author.displayName);
+  const photoURL = normalizeText(author.photoURL);
 
   if (validation.error) {
     return { success: false, error: validation.error };
@@ -165,6 +165,8 @@ export async function addComment(postId, userId, text) {
   const payload = {
     postId: validation.postId,
     userId: validation.userId,
+    displayName,
+    photoURL,
     text: cleanText,
     createdAt: serverTimestamp(),
   };
@@ -237,19 +239,37 @@ export async function savePost(postId, userId) {
   const postRef = doc(db, "posts", validation.postId);
 
   try {
-    const postSnapshot = await getDoc(postRef);
+    const transactionResult = await runTransaction(db, async (transaction) => {
+      const postSnapshot = await transaction.get(postRef);
+      const saveSnapshot = await transaction.get(saveRef);
 
-    if (!postSnapshot.exists()) {
-      return { success: false, error: "Post tidak ditemukan." };
-    }
+      if (!postSnapshot.exists()) {
+        throw createSocialError("post-not-found", "Post tidak ditemukan.");
+      }
 
-    await setDoc(saveRef, {
-      userId: validation.userId,
-      postId: validation.postId,
-      createdAt: serverTimestamp(),
+      if (saveSnapshot.exists()) {
+        return { changed: false };
+      }
+
+      transaction.set(saveRef, {
+        userId: validation.userId,
+        postId: validation.postId,
+        createdAt: serverTimestamp(),
+      });
+      transaction.update(postRef, {
+        saves: increment(1),
+        updatedAt: serverTimestamp(),
+      });
+
+      return { changed: true };
     });
 
-    return { success: true, saved: true, saveId };
+    return {
+      success: true,
+      saved: true,
+      changed: transactionResult.changed,
+      saveId,
+    };
   } catch (error) {
     return { success: false, error: getSocialErrorMessage(error) };
   }
@@ -263,11 +283,39 @@ export async function unsavePost(postId, userId) {
   }
 
   const saveId = createDocId(validation.userId, validation.postId);
+  const saveRef = doc(db, "saves", saveId);
+  const postRef = doc(db, "posts", validation.postId);
 
   try {
-    await deleteDoc(doc(db, "saves", saveId));
+    const transactionResult = await runTransaction(db, async (transaction) => {
+      const postSnapshot = await transaction.get(postRef);
+      const saveSnapshot = await transaction.get(saveRef);
 
-    return { success: true, saved: false, saveId };
+      if (!postSnapshot.exists()) {
+        throw createSocialError("post-not-found", "Post tidak ditemukan.");
+      }
+
+      if (!saveSnapshot.exists()) {
+        return { changed: false };
+      }
+
+      const currentSaves = Number(postSnapshot.data().saves || 0);
+
+      transaction.delete(saveRef);
+      transaction.update(postRef, {
+        saves: Math.max(currentSaves - 1, 0),
+        updatedAt: serverTimestamp(),
+      });
+
+      return { changed: true };
+    });
+
+    return {
+      success: true,
+      saved: false,
+      changed: transactionResult.changed,
+      saveId,
+    };
   } catch (error) {
     return { success: false, error: getSocialErrorMessage(error) };
   }
