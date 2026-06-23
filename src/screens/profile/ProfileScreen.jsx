@@ -11,11 +11,20 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from 'firebase/firestore';
 
 import { ConnectionSheet } from '../../components/profile/ConnectionSheet';
 import { PostGrid } from '../../components/profile/PostGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
+import { db } from '../../utils/firebase';
 import { getUserPosts } from '../../utils/posts';
 import {
   getCommentedPosts,
@@ -200,6 +209,46 @@ export function ProfileScreen({
 
     return () => clearTimeout(task);
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (!targetUserId) {
+      return undefined;
+    }
+
+    const profileRef = doc(db, 'users', targetUserId);
+    const postsRef = query(
+      collection(db, 'posts'),
+      where('userId', '==', targetUserId),
+      orderBy('createdAt', 'desc'),
+    );
+
+    const stopProfile = onSnapshot(profileRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        return;
+      }
+
+      const nextProfile = { id: snapshot.id, ...snapshot.data() };
+      setVisibleProfile(nextProfile);
+
+      if (isOwnProfile) {
+        setProfile(nextProfile);
+      }
+    });
+
+    const stopPosts = onSnapshot(postsRef, (snapshot) => {
+      const nextPosts = snapshot.docs.map((postDoc) => ({
+        id: postDoc.id,
+        ...postDoc.data(),
+      }));
+
+      setPosts(nextPosts);
+    });
+
+    return () => {
+      stopProfile();
+      stopPosts();
+    };
+  }, [isOwnProfile, setProfile, targetUserId]);
 
   async function handleFollowToggle() {
     if (!currentUserId || !targetUserId) {
