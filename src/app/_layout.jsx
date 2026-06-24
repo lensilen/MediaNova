@@ -8,12 +8,18 @@ import { colors } from '../constants/theme';
 import { OfflineBanner } from '../components/shared/OfflineBanner';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import {
+  initializeFcmService,
+  setBackgroundFcmMessageHandler,
+} from '../utils/fcmService';
+
+setBackgroundFcmMessageHandler();
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const firstSegment = segments[0];
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { isDark } = useTheme();
 
   useEffect(() => {
@@ -32,6 +38,31 @@ export default function RootLayout() {
       router.replace("/(tabs)");
     }
   }, [firstSegment, isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !user?.uid) {
+      return undefined;
+    }
+
+    let isActive = true;
+    let unsubscribe = () => {};
+
+    initializeFcmService(user.uid).then((result) => {
+      if (!isActive) {
+        result.unsubscribe?.();
+        return;
+      }
+
+      if (typeof result.unsubscribe === "function") {
+        unsubscribe = result.unsubscribe;
+      }
+    });
+
+    return () => {
+      isActive = false;
+      unsubscribe();
+    };
+  }, [isAuthenticated, isLoading, user?.uid]);
 
   return (
     <GestureHandlerRootView style={styles.root}>
