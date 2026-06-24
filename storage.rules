@@ -1,0 +1,70 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function hasIncomingFile() {
+      return request.resource != null;
+    }
+
+    function isImage() {
+      return hasIncomingFile() &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    function isVideo() {
+      return hasIncomingFile() &&
+        request.resource.contentType.matches('video/.*');
+    }
+
+    function isAudio() {
+      return hasIncomingFile() &&
+        request.resource.contentType.matches('audio/.*');
+    }
+
+    function maxSize(bytes) {
+      return hasIncomingFile() && request.resource.size <= bytes;
+    }
+
+    match /posts/images/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && isImage() && maxSize(15 * 1024 * 1024);
+    }
+
+    match /posts/videos/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && isVideo() && maxSize(200 * 1024 * 1024);
+    }
+
+    match /posts/audio/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && isAudio() && maxSize(50 * 1024 * 1024);
+    }
+
+    match /posts/thumbnails/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && isImage() && maxSize(5 * 1024 * 1024);
+    }
+
+    match /users/{userId}/profile/{fileName} {
+      allow read: if signedIn();
+      allow write: if isOwner(userId) && isImage() && maxSize(10 * 1024 * 1024);
+    }
+
+    match /uploads/chunked/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && hasIncomingFile() && maxSize(200 * 1024 * 1024);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

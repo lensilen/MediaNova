@@ -1,3 +1,1 @@
-import { LoginScreen } from '../../screens/auth/LoginScreen';
-
-export default LoginScreen;
+export { default } from "../../screens/auth/LoginScreen";
