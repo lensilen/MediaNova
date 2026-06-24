@@ -117,9 +117,6 @@ Daftar screenshot yang disarankan:
 
 - Technical Documentation: `docs/TECHNICAL_DOCUMENTATION.md`
 - User Manual: `docs/USER_MANUAL.md`
-- Demo Script: `docs/DEMO_SCRIPT.md`
-- Deliverable Checklist: `docs/DELIVERABLE_CHECKLIST.md`
-- Presentation Slides: `outputs/MediaNova_Presentation.pptx`
 
 ## Upload Notes
 
@@ -128,9 +125,3 @@ Daftar screenshot yang disarankan:
 - Target video bitrate adalah 2 Mbps sebelum diupload.
 - Firebase Storage fallback menggunakan `uploadBytesResumable`.
 - Cloudinary digunakan untuk URL delivery media agar feed/profile bisa menampilkan video, foto, dan audio dari URL publik.
-
-## Limitasi Yang Perlu Dijelaskan Saat Demo
-
-- Editor video/audio masih editor sederhana. UI trim/speed/volume/text/filter tersedia, tetapi render file final belum setara aplikasi seperti CapCut.
-- Sticker overlay tersedia, tetapi face tracking native penuh masih berisiko pada beberapa device.
-- Push notification end-to-end memerlukan setup server/Cloud Functions tambahan untuk produksi.
