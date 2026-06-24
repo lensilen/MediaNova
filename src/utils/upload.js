@@ -96,12 +96,14 @@ function notifyProgress(onProgress, snapshot, phase = "upload") {
   const totalBytes = snapshot.totalBytes || 0;
   const bytesTransferred = snapshot.bytesTransferred || 0;
   const progress = totalBytes > 0 ? bytesTransferred / totalBytes : 0;
+  const clampedProgress = Math.min(Math.max(progress, 0), 1);
+  const percent = Math.max(0, Math.min(100, Math.round(clampedProgress * 100)));
 
   onProgress({
     bytesTransferred,
     totalBytes,
-    progress,
-    percent: Math.round(progress * 100),
+    progress: clampedProgress,
+    percent,
     state: snapshot.state,
     phase,
   });

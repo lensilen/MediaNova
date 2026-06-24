@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
+import { TAB_BAR_HEIGHT } from "../../constants/layout";
 import { colors } from "../../constants/theme";
 
 const tabIcons = {
@@ -25,6 +26,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          height: TAB_BAR_HEIGHT,
+          paddingBottom: 8,
+          paddingTop: 6,
         },
       }}
     >

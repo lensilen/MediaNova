@@ -5,7 +5,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Dimensions,
   Image,
   Pressable,
   StyleSheet,
@@ -27,10 +26,10 @@ import {
 import { ActionButtons } from "./ActionButtons";
 import { CommentSheet } from "./CommentSheet";
 
-const { height } = Dimensions.get("window");
 const demoVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
 
 export function VideoCard({
+  feedHeight = 0,
   post,
   isActive = false,
   onProfilePress,
@@ -43,6 +42,7 @@ export function VideoCard({
   const type = post?.type || "video";
   const isAudioPost = type === "audio";
   const isPhotoPost = type === "photo";
+  const cardHeight = Math.max(Number(feedHeight) || 0, 360);
 
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -165,7 +165,7 @@ export function VideoCard({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: cardHeight }]}>
       {renderMedia()}
 
       <View style={styles.overlay}>
@@ -183,7 +183,11 @@ export function VideoCard({
           </View>
 
           <Text style={styles.username}>
-            @{post?.username || "student_creator"}
+            @
+            {post?.username ||
+              post?.displayName?.toLowerCase().replace(/\s+/g, "_") ||
+              post?.userId?.slice(0, 8) ||
+              "creator"}
           </Text>
         </Pressable>
 
@@ -309,7 +313,8 @@ function AudioSurface({ isActive, title, uri }) {
   const player = useAudioPlayer(uri);
   const status = useAudioPlayerStatus(player);
   const currentSeconds = status?.currentTime || 0;
-  const durationSeconds = status?.duration || status?.durationMillis / 1000 || 0;
+  const durationSeconds =
+    status?.duration || status?.durationMillis / 1000 || 0;
   const progress = durationSeconds > 0 ? currentSeconds / durationSeconds : 0;
 
   useEffect(() => {
@@ -382,7 +387,7 @@ function Timeline({ currentSeconds, durationSeconds, progress }) {
 }
 
 const styles = StyleSheet.create({
-  container: { height, backgroundColor: "#000" },
+  container: { backgroundColor: "#000" },
   mediaWrapper: { flex: 1 },
   mediaFill: { position: "absolute", width: "100%", height: "100%" },
   audioSurface: {
@@ -462,7 +467,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  username: { color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginLeft: 10 },
+  username: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+    marginLeft: 10,
+  },
   caption: { color: "#FFFFFF", fontSize: 13, lineHeight: 20 },
   moreText: { color: "#FFFFFF", fontWeight: "700", marginTop: 6 },
   timelineWrapper: {

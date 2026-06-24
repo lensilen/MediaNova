@@ -78,7 +78,9 @@ function validatePostPayload(userId, type, mediaURL) {
 function normalizeVisibility(value) {
   const cleanValue = normalizeText(value).toLowerCase();
 
-  return ["everyone", "followers"].includes(cleanValue) ? cleanValue : "everyone";
+  return ["everyone", "followers"].includes(cleanValue)
+    ? cleanValue
+    : "everyone";
 }
 
 function sanitizePlainObject(value) {
@@ -116,7 +118,9 @@ function extractMentions(...values) {
   const text = values.map(normalizeText).join(" ");
   const matches = text.match(/@[a-zA-Z0-9._]+/g) || [];
 
-  return Array.from(new Set(matches.map((item) => item.slice(1).toLowerCase())));
+  return Array.from(
+    new Set(matches.map((item) => item.slice(1).toLowerCase())),
+  );
 }
 
 async function createMentionNotifications({ fromUserId, mentions, postId }) {
@@ -137,7 +141,12 @@ async function createMentionNotifications({ fromUserId, mentions, postId }) {
 
     await Promise.all(
       users.map((profile) =>
-        createNotification(profile.id || profile.uid, fromUserId, "mention", postId),
+        createNotification(
+          profile.id || profile.uid,
+          fromUserId,
+          "mention",
+          postId,
+        ),
       ),
     );
   } catch {
@@ -180,7 +189,8 @@ export async function createPost(
     captionLower: cleanCaption.toLowerCase(),
     username:
       normalizeText(author.username) ||
-      createHandle(author.email || author.displayName || cleanUserId),
+      createHandle(author.displayName || author.email || cleanUserId) ||
+      createHandle(cleanUserId),
     displayName: normalizeText(author.displayName),
     photoURL: normalizeText(author.photoURL),
     location: cleanLocation,
