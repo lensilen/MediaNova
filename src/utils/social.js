@@ -5,6 +5,10 @@ export {
   isSaved,
   likePost,
   savePost,
+  subscribeComments,
+  subscribeLikeStatus,
+  subscribePostSocial,
+  subscribeSaveStatus,
   unlikePost,
   unsavePost,
 } from "./socialPosts";

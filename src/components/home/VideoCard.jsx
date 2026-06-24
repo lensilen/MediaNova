@@ -19,10 +19,11 @@ import { useAuth } from "../../hooks/useAuth";
 import { formatTime, waveformBars } from "../../screens/create/createOptions";
 import { getUserProfile } from "../../utils/profile";
 import {
-  isLiked,
-  isSaved,
   likePost,
   savePost,
+  subscribeLikeStatus,
+  subscribePostSocial,
+  subscribeSaveStatus,
   unlikePost,
   unsavePost,
 } from "../../utils/socialPosts";
@@ -114,30 +115,34 @@ export function VideoCard({
   }, [post?.displayName, post?.photoURL, post?.userId, post?.username]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadSocialState() {
-      if (!post?.id || !user?.uid) {
-        setLiked(false);
-        setSaved(false);
-        return;
-      }
-
-      const [likedResult, savedResult] = await Promise.all([
-        isLiked(post.id, user.uid),
-        isSaved(post.id, user.uid),
-      ]);
-
-      if (!isMounted) return;
-
-      if (likedResult.success) setLiked(likedResult.isLiked);
-      if (savedResult.success) setSaved(savedResult.isSaved);
+    if (!post?.id) {
+      return undefined;
     }
 
-    loadSocialState();
+    return subscribePostSocial(post.id, (result) => {
+      if (!result.success) return;
+
+      setLikeCount(result.counts.likes);
+      setCommentCount(result.counts.comments);
+      setSaveCount(result.counts.saves);
+    });
+  }, [post?.id]);
+
+  useEffect(() => {
+    if (!post?.id || !user?.uid) {
+      return undefined;
+    }
+
+    const stopLike = subscribeLikeStatus(post.id, user.uid, (result) => {
+      if (result.success) setLiked(result.isLiked);
+    });
+    const stopSave = subscribeSaveStatus(post.id, user.uid, (result) => {
+      if (result.success) setSaved(result.isSaved);
+    });
 
     return () => {
-      isMounted = false;
+      stopLike();
+      stopSave();
     };
   }, [post?.id, user?.uid]);
 
@@ -287,7 +292,7 @@ export function VideoCard({
         <CommentSheet
           comments={[]}
           onClose={() => setShowComments(false)}
-          onCommentAdded={() => setCommentCount((prev) => prev + 1)}
+          onCommentAdded={() => {}}
           postId={post.id}
           visible={showComments}
         />

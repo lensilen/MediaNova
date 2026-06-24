@@ -19,7 +19,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { useAuth } from "../../hooks/useAuth";
-import { addComment, getComments } from "../../utils/socialPosts";
+import { addComment, subscribeComments } from "../../utils/socialPosts";
 
 export function CommentSheet({ 
   visible, 
@@ -57,29 +57,28 @@ export function CommentSheet({
   }));
 
   useEffect(() => {
-    let isActive = true;
-
-    async function loadComments() {
-      if (!visible || !postId) return;
-
-      setIsLoading(true);
-      const result = await getComments(postId);
-
-      if (!isActive) return;
-
-      if (result.success) {
-        setLocalComments(result.comments);
-      } else {
-        setLocalComments(comments);
-      }
-
-      setIsLoading(false);
+    if (!visible || !postId) {
+      return undefined;
     }
 
-    loadComments();
+    const unsubscribe = subscribeComments(
+      postId,
+      (result) => {
+        setIsLoading(false);
+        if (!result.success) {
+          setLocalComments(comments);
+          return;
+        }
+        setLocalComments(result.comments);
+      },
+      () => {
+        setIsLoading(false);
+        setLocalComments(comments);
+      },
+    );
 
     return () => {
-      isActive = false;
+      unsubscribe();
     };
   }, [comments, postId, visible]);
 
@@ -99,15 +98,6 @@ export function CommentSheet({
     });
 
     if (result.success) {
-      setLocalComments((items) => [
-        ...items,
-        {
-          ...result.comment,
-          displayName: currentUserName,
-          photoURL: currentUserAvatar,
-          text: cleanText,
-        },
-      ]);
       setCommentText("");
       onCommentAdded?.(result.comment);
     } else {

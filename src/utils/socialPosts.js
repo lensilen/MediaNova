@@ -5,6 +5,7 @@ import {
   getDocs,
   increment,
   limit as queryLimit,
+  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
@@ -146,6 +147,79 @@ export async function isLiked(postId, userId) {
   }
 }
 
+export function subscribePostSocial(postId, callback, onError) {
+  const cleanPostId = normalizeText(postId);
+
+  if (!cleanPostId || typeof callback !== "function") {
+    return () => {};
+  }
+
+  return onSnapshot(
+    doc(db, "posts", cleanPostId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback({
+          success: false,
+          error: "Post tidak ditemukan.",
+        });
+        return;
+      }
+
+      const post = snapshot.data();
+
+      callback({
+        success: true,
+        post: {
+          id: snapshot.id,
+          ...post,
+        },
+        counts: {
+          comments: Number(post.commentsCount || post.comments || 0),
+          likes: Number(post.likes || 0),
+          saves: Number(post.saves || 0),
+        },
+      });
+    },
+    (error) => {
+      const result = { success: false, error: getSocialErrorMessage(error) };
+
+      if (typeof onError === "function") {
+        onError(result);
+        return;
+      }
+
+      callback(result);
+    },
+  );
+}
+
+export function subscribeLikeStatus(postId, userId, callback, onError) {
+  const validation = validatePostUser(postId, userId);
+
+  if (validation.error || typeof callback !== "function") {
+    return () => {};
+  }
+
+  const likeId = createDocId(validation.userId, validation.postId);
+
+  return onSnapshot(
+    doc(db, "likes", likeId),
+    (snapshot) => {
+      callback({ success: true, isLiked: snapshot.exists() });
+    },
+    (error) => {
+      const result = { success: false, error: getSocialErrorMessage(error) };
+
+      if (typeof onError === "function") {
+        onError(result);
+        return;
+      }
+
+      callback(result);
+    },
+  );
+}
+
 export async function addComment(postId, userId, text, author = {}) {
   const validation = validatePostUser(postId, userId);
   const cleanText = normalizeText(text);
@@ -225,6 +299,41 @@ export async function getComments(postId, limitValue = 50) {
   } catch (error) {
     return { success: false, error: getSocialErrorMessage(error) };
   }
+}
+
+export function subscribeComments(postId, callback, onError, limitValue = 50) {
+  const cleanPostId = normalizeText(postId);
+
+  if (!cleanPostId || typeof callback !== "function") {
+    return () => {};
+  }
+
+  const safeLimit = normalizeLimit(limitValue, 50);
+  const commentsQuery = query(
+    collection(db, "comments"),
+    where("postId", "==", cleanPostId),
+    queryLimit(safeLimit),
+  );
+
+  return onSnapshot(
+    commentsQuery,
+    (snapshot) => {
+      callback({
+        success: true,
+        comments: sortNewestFirst(normalizeQuerySnapshot(snapshot)),
+      });
+    },
+    (error) => {
+      const result = { success: false, error: getSocialErrorMessage(error) };
+
+      if (typeof onError === "function") {
+        onError(result);
+        return;
+      }
+
+      callback(result);
+    },
+  );
 }
 
 export async function savePost(postId, userId) {
@@ -345,4 +454,31 @@ export async function isSaved(postId, userId) {
   } catch (error) {
     return { success: false, error: getSocialErrorMessage(error) };
   }
+}
+
+export function subscribeSaveStatus(postId, userId, callback, onError) {
+  const validation = validatePostUser(postId, userId);
+
+  if (validation.error || typeof callback !== "function") {
+    return () => {};
+  }
+
+  const saveId = createDocId(validation.userId, validation.postId);
+
+  return onSnapshot(
+    doc(db, "saves", saveId),
+    (snapshot) => {
+      callback({ success: true, isSaved: snapshot.exists() });
+    },
+    (error) => {
+      const result = { success: false, error: getSocialErrorMessage(error) };
+
+      if (typeof onError === "function") {
+        onError(result);
+        return;
+      }
+
+      callback(result);
+    },
+  );
 }
