@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { colors } from '../constants/theme';
 import { OfflineBanner } from '../components/shared/OfflineBanner';
@@ -33,7 +34,7 @@ export default function RootLayout() {
   }, [firstSegment, isAuthenticated, isLoading, router]);
 
   return (
-    <>
+    <GestureHandlerRootView style={styles.root}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
@@ -54,10 +55,13 @@ export default function RootLayout() {
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
       ) : null}
-    </>
+    </GestureHandlerRootView>
   );
 }
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

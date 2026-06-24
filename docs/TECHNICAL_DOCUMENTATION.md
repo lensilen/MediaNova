@@ -252,14 +252,29 @@ Prinsip utama:
 - Cloudinary delivery URL dipakai untuk memudahkan preview media di feed/profile.
 - Firebase Storage tetap tersedia sebagai fallback upload.
 
-## 9. Limitasi Teknis
+## 9. Animasi dan Gesture
+
+MediaNova memakai `react-native-reanimated` dan `react-native-gesture-handler` untuk memenuhi kebutuhan animasi dan gesture custom.
+
+### Reanimated
+
+- Like button scale / heart pop pada feed action button.
+- Active transition pada toolbar editor media.
+- Comment sheet slide/fade animation.
+
+### Gesture Handler
+
+- Double-tap to like pada feed card.
+- Pan gesture untuk drag text overlay di video editor.
+
+## 10. Limitasi Teknis
 
 - Editor video/audio belum melakukan render final setara CapCut. Sebagian fitur editor menyimpan metadata dan preview UI.
 - Face tracking sticker penuh masih bergantung native dependency dan dapat berbeda per device.
 - Push notification background full memerlukan backend trigger seperti Firebase Cloud Functions.
 - Jika file lokal cache hilang sebelum upload, preview editor dapat gagal menampilkan media.
 
-## 10. Testing Checklist
+## 11. Testing Checklist
 
 - `npm run lint`
 - `npx expo export --platform android`

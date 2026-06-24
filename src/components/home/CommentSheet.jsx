@@ -12,6 +12,12 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+
 import { useAuth } from "../../hooks/useAuth";
 import { addComment, getComments } from "../../utils/socialPosts";
 
@@ -26,6 +32,7 @@ export function CommentSheet({
   const [localComments, setLocalComments] = useState(comments);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const sheetProgress = useSharedValue(0);
 
   const { user, profile } = useAuth();
   
@@ -36,6 +43,18 @@ export function CommentSheet({
 
   const defaultAvatar = `https://ui-avatars.com/api/?name=${currentUserName}&background=2E3748&color=FFFFFF`;
   const currentUserAvatar = profile?.photoURL || user?.photoURL || defaultAvatar;
+
+  useEffect(() => {
+    sheetProgress.set(withTiming(visible ? 1 : 0, { duration: 220 }));
+  }, [sheetProgress, visible]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: sheetProgress.value,
+  }));
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - sheetProgress.value) * 360 }],
+  }));
 
   useEffect(() => {
     let isActive = true;
@@ -102,10 +121,10 @@ export function CommentSheet({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
     >
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
+      <Animated.View style={[styles.overlay, overlayStyle]}>
+        <Animated.View style={[styles.sheet, sheetStyle]}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -191,8 +210,8 @@ export function CommentSheet({
               )}
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }

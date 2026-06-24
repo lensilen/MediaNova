@@ -21,6 +21,8 @@ MediaNova adalah aplikasi social media multimedia untuk Kelompok 3 dengan fokus 
 - Camera tools: flash, timer, filter warna, sticker overlay
 - Notification sederhana untuk follow, like, comment, save, mention
 - Dark/light theme, offline cache dasar, dan upload progress
+- Animasi Reanimated: like heart pop, editor toolbar transition, comment sheet slide/fade
+- Gesture Handler: double-tap to like di feed dan drag text overlay di editor video
 
 ## Instalasi
 

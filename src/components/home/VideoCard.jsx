@@ -3,6 +3,8 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
 import {
   Alert,
   Image,
@@ -189,6 +191,24 @@ export function VideoCard({
     });
   }
 
+  function handleDoubleTapLike() {
+    if (!user?.uid) {
+      Alert.alert("Login dibutuhkan", "Masuk dulu sebelum like post.");
+      return;
+    }
+
+    if (!liked) {
+      handleLike();
+    }
+  }
+
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDelay(260)
+    .onEnd(() => {
+      runOnJS(handleDoubleTapLike)();
+    });
+
   function renderMedia() {
     if (!mediaUrl) {
       return <MissingMedia type={type} />;
@@ -212,65 +232,67 @@ export function VideoCard({
   }
 
   return (
-    <View style={[styles.container, { height: cardHeight }]}>
-      {renderMedia()}
+    <GestureDetector gesture={doubleTapGesture}>
+      <View style={[styles.container, { height: cardHeight }]}>
+        {renderMedia()}
 
-      <View style={styles.overlay}>
-        <Pressable style={styles.profileRow} onPress={handleProfileNavigation}>
-          <View>
-            <Image
-              source={{
-                uri: authorPhoto,
-              }}
-              style={styles.avatar}
-            />
-            <View style={styles.followBadge}>
-              <Ionicons name="add" size={12} color="#FFFFFF" />
+        <View style={styles.overlay}>
+          <Pressable style={styles.profileRow} onPress={handleProfileNavigation}>
+            <View>
+              <Image
+                source={{
+                  uri: authorPhoto,
+                }}
+                style={styles.avatar}
+              />
+              <View style={styles.followBadge}>
+                <Ionicons name="add" size={12} color="#FFFFFF" />
+              </View>
             </View>
-          </View>
 
-          <Text style={styles.username}>
-            @{authorName}
+            <Text style={styles.username}>
+              @{authorName}
+            </Text>
+          </Pressable>
+
+          <Text numberOfLines={expanded ? undefined : 2} style={styles.caption}>
+            {post?.caption || "Exploring the new library! #campuslife"}
           </Text>
-        </Pressable>
 
-        <Text numberOfLines={expanded ? undefined : 2} style={styles.caption}>
-          {post?.caption || "Exploring the new library! #campuslife"}
-        </Text>
+          <Pressable onPress={() => setExpanded(!expanded)}>
+            <Text style={styles.moreText}>{expanded ? "less" : "more"}</Text>
+          </Pressable>
+        </View>
 
-        <Pressable onPress={() => setExpanded(!expanded)}>
-          <Text style={styles.moreText}>{expanded ? "less" : "more"}</Text>
-        </Pressable>
+        <ActionButtons
+          comments={commentCount}
+          liked={liked}
+          likes={likeCount}
+          onComment={() => {
+            if (post?.allowComments === false) {
+              Alert.alert("Komentar ditutup", "Creator menonaktifkan komentar.");
+              return;
+            }
+
+            setShowComments(true);
+            onComment?.(post);
+          }}
+          onLike={handleLike}
+          onSave={handleSave}
+          onShare={() => onShare?.(post)}
+          saved={saved}
+          saves={saveCount}
+        />
+
+        <CommentSheet
+          comments={[]}
+          onClose={() => setShowComments(false)}
+          onCommentAdded={() => setCommentCount((prev) => prev + 1)}
+          postId={post.id}
+          visible={showComments}
+        />
       </View>
-
-      <ActionButtons
-        comments={commentCount}
-        liked={liked}
-        likes={likeCount}
-        onComment={() => {
-          if (post?.allowComments === false) {
-            Alert.alert("Komentar ditutup", "Creator menonaktifkan komentar.");
-            return;
-          }
-
-          setShowComments(true);
-          onComment?.(post);
-        }}
-        onLike={handleLike}
-        onSave={handleSave}
-        onShare={() => onShare?.(post)}
-        saved={saved}
-        saves={saveCount}
-      />
-
-      <CommentSheet
-        comments={[]}
-        onClose={() => setShowComments(false)}
-        onCommentAdded={() => setCommentCount((prev) => prev + 1)}
-        postId={post.id}
-        visible={showComments}
-      />
-    </View>
+    </GestureDetector>
   );
 }
 

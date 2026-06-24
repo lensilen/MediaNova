@@ -8,13 +8,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
-  PanResponder,
   Pressable,
   Text,
   TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { FilterStrip } from "../../components/editor/FilterStrip";
@@ -42,6 +47,12 @@ const textFonts = [
   { key: "serif", label: "Serif", value: "serif" },
   { key: "mono", label: "Mono", value: "monospace" },
 ];
+
+function clampPosition(value, min, max) {
+  "worklet";
+  return Math.max(min, Math.min(max, value));
+}
+
 export function VideoEditorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -79,23 +90,48 @@ export function VideoEditorScreen() {
   const [splitPoint, setSplitPoint] = useState(30);
   const [thumbnail, setThumbnail] = useState({ sourceUri: "", uri: "" });
   const [firstFrameSource, setFirstFrameSource] = useState("");
+  const textX = useSharedValue(22);
+  const textY = useSharedValue(170);
+  const startTextX = useSharedValue(22);
+  const startTextY = useSharedValue(170);
   const thumbnailUri =
     thumbnail.sourceUri === uri ? thumbnail.uri || storedThumbnail : storedThumbnail;
   const firstFrameReady = firstFrameSource === uri;
-  const textPan = useMemo(
-    () =>
-      PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        setTextPosition({
-          x: Math.max(8, Math.min(previewWidth - 80, textPosition.x + gesture.dx)),
-          y: Math.max(8, Math.min(previewHeight - 54, textPosition.y + gesture.dy)),
-        });
-      },
-    }),
-    [previewHeight, previewWidth, textPosition],
-  );
+
+  useEffect(() => {
+    textX.set(Math.max(8, Math.min(previewWidth - 80, textPosition.x)));
+    textY.set(Math.max(8, Math.min(previewHeight - 54, textPosition.y)));
+  }, [previewHeight, previewWidth, textPosition.x, textPosition.y, textX, textY]);
+
+  function saveTextPosition(nextPosition) {
+    setTextPosition(nextPosition);
+  }
+
+  const textDragGesture = Gesture.Pan()
+    .onBegin(() => {
+      startTextX.set(textX.get());
+      startTextY.set(textY.get());
+    })
+    .onUpdate((event) => {
+      textX.set(clampPosition(
+        startTextX.get() + event.translationX,
+        8,
+        previewWidth - 80,
+      ));
+      textY.set(clampPosition(
+        startTextY.get() + event.translationY,
+        8,
+        previewHeight - 54,
+      ));
+    })
+    .onEnd(() => {
+      runOnJS(saveTextPosition)({ x: textX.get(), y: textY.get() });
+    });
+
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    left: textX.get(),
+    top: textY.get(),
+  }));
 
   const videoSource = useMemo(() => uri || null, [uri]);
   const player = useVideoPlayer(videoSource, (nextPlayer) => {
@@ -344,29 +380,30 @@ export function VideoEditorScreen() {
         ) : null}
         <StickerOverlay sticker={selectedSticker} />
         {overlayText ? (
-          <View
-            {...textPan.panHandlers}
-            style={[
-              styles.draggableTextBox,
-              { left: textPosition.x, top: textPosition.y },
-            ]}
-          >
-            <Text
-              numberOfLines={3}
+          <GestureDetector gesture={textDragGesture}>
+            <Animated.View
               style={[
-                styles.overlayText,
-                {
-                  color: textColor,
-                  fontFamily: textFont.value,
-                  fontSize: textSize,
-                  fontStyle: textItalic ? "italic" : "normal",
-                  fontWeight: textBold ? "900" : "600",
-                },
+                styles.draggableTextBox,
+                textAnimatedStyle,
               ]}
             >
-              {overlayText}
-            </Text>
-          </View>
+              <Text
+                numberOfLines={3}
+                style={[
+                  styles.overlayText,
+                  {
+                    color: textColor,
+                    fontFamily: textFont.value,
+                    fontSize: textSize,
+                    fontStyle: textItalic ? "italic" : "normal",
+                    fontWeight: textBold ? "900" : "600",
+                  },
+                ]}
+              >
+                {overlayText}
+              </Text>
+            </Animated.View>
+          </GestureDetector>
         ) : null}
         <Pressable style={styles.previewPlayButton} onPress={toggleVideoPreview}>
           <Ionicons

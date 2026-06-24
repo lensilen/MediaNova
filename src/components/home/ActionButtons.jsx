@@ -1,5 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from "react-native-reanimated";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function ActionButtons({
   likes = 0,
@@ -12,17 +20,33 @@ export function ActionButtons({
   onSave,
   onShare,
 }) {
+  const likeScale = useSharedValue(1);
+  const likeAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: likeScale.value }],
+  }));
+
+  function handleLikePress() {
+    likeScale.set(withSequence(
+      withSpring(1.28, { damping: 8, stiffness: 240 }),
+      withSpring(1, { damping: 10, stiffness: 180 }),
+    ));
+    onLike?.();
+  }
+
   return (
     <View style={styles.container}>
       {/* Like Button */}
-      <Pressable style={styles.action} onPress={onLike}>
+      <AnimatedPressable
+        style={[styles.action, likeAnimatedStyle]}
+        onPress={handleLikePress}
+      >
         <Ionicons
           name={liked ? "heart" : "heart-outline"}
           size={34}
           color={liked ? "#FF3040" : "#FFFFFF"}
         />
         <Text style={styles.count}>{likes}</Text>
-      </Pressable>
+      </AnimatedPressable>
 
       {/* Comment Button */}
       <Pressable style={styles.action} onPress={onComment}>
