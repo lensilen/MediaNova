@@ -27,22 +27,6 @@ import {
 import { subscribeFeedPosts } from "../../utils/posts";
 import { useFeedStore } from "../../store/feedStore";
 
-const dummyVideos = [
-  {
-    id: "1",
-    type: "video",
-    username: "medianova_demo",
-    photoURL: "https://i.pravatar.cc/150?img=1",
-    caption: "Demo feed MediaNova. Upload post baru untuk melihat konten asli.",
-    mediaURL: "https://www.w3schools.com/html/mov_bbb.mp4",
-    likes: 12400,
-    comments: 342,
-    saves: 89,
-    currentTime: "1:04",
-    duration: "3:42",
-  },
-];
-
 export default function FeedScreen() {
   const listRef = useRef(null);
   const router = useRouter();
@@ -52,13 +36,7 @@ export default function FeedScreen() {
   const isFocused = pathname === "/";
   const { posts, hasMore, isLoading, isRefreshing, error, loadFeed, loadMore } =
     useFeed({ pageSize: 8 });
-  const feedPosts = useMemo(
-    () =>
-      posts.length
-        ? posts
-        : dummyVideos.map((video) => ({ ...video, isDemo: true })),
-    [posts],
-  );
+  const feedPosts = useMemo(() => posts, [posts]);
   const [activeId, setActiveId] = useState(feedPosts[0]?.id || "");
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -163,7 +141,7 @@ export default function FeedScreen() {
 
       return () => {
         unsubscribe();
-        setActiveId(dummyVideos[0]?.id || "");
+        setActiveId("");
         listRef.current?.scrollToOffset?.({ animated: false, offset: 0 });
       };
     }, [loadFeed]),
@@ -199,38 +177,55 @@ export default function FeedScreen() {
       ) : null}
 
       {/* FEED */}
-      <FlatList
-        ref={listRef}
-        data={feedPosts}
-        decelerationRate="fast"
-        getItemLayout={(_, index) => ({
-          index,
-          length: feedHeight,
-          offset: feedHeight * index,
-        })}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        snapToAlignment="start"
-        snapToInterval={feedHeight}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => loadFeed({ refresh: true })}
-            tintColor="#FFFFFF"
-          />
-        }
-        onEndReached={() => {
-          if (hasMore) loadMore();
-        }}
-        onEndReachedThreshold={0.5}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        removeClippedSubviews
-        initialNumToRender={2}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-      />
+      {feedPosts.length ? (
+        <FlatList
+          ref={listRef}
+          data={feedPosts}
+          decelerationRate="fast"
+          getItemLayout={(_, index) => ({
+            index,
+            length: feedHeight,
+            offset: feedHeight * index,
+          })}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          snapToAlignment="start"
+          snapToInterval={feedHeight}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => loadFeed({ refresh: true })}
+              tintColor="#FFFFFF"
+            />
+          }
+          onEndReached={() => {
+            if (hasMore) loadMore();
+          }}
+          onEndReachedThreshold={0.5}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          removeClippedSubviews
+          initialNumToRender={2}
+          maxToRenderPerBatch={2}
+          windowSize={3}
+        />
+      ) : (
+        <View style={styles.emptyFeed}>
+          <Ionicons name="film-outline" size={34} color="#FFFFFF" />
+          <Text style={styles.emptyTitle}>Belum ada media</Text>
+          <Text style={styles.emptyText}>
+            Upload video, foto, atau audio dari halaman Create agar muncul di
+            feed utama.
+          </Text>
+          <Pressable
+            style={styles.emptyButton}
+            onPress={() => router.push("/(tabs)/add")}
+          >
+            <Text style={styles.emptyButtonText}>Buat media</Text>
+          </Pressable>
+        </View>
+      )}
 
       <NotificationModal
         isLoading={notificationLoading}
@@ -385,5 +380,37 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 24,
     textAlign: "center",
+  },
+  emptyFeed: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 30,
+    backgroundColor: "#000000",
+  },
+  emptyTitle: {
+    marginTop: 14,
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  emptyText: {
+    marginTop: 8,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  emptyButton: {
+    marginTop: 20,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  emptyButtonText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "800",
   },
 });

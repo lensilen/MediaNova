@@ -15,6 +15,7 @@ import {
 import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import { formatTime, waveformBars } from "../../screens/create/createOptions";
+import { getUserProfile } from "../../utils/profile";
 import {
   isLiked,
   isSaved,
@@ -26,7 +27,19 @@ import {
 import { ActionButtons } from "./ActionButtons";
 import { CommentSheet } from "./CommentSheet";
 
-const demoVideoUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+function makeHandle(value) {
+  return String(value || "")
+    .trim()
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, "");
+}
+
+function isPlaceholderHandle(value) {
+  return ["student_creator", "medianova_demo", "creator"].includes(
+    makeHandle(value),
+  );
+}
 
 export function VideoCard({
   feedHeight = 0,
@@ -38,7 +51,7 @@ export function VideoCard({
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const mediaUrl = post?.mediaURL || demoVideoUrl;
+  const mediaUrl = post?.mediaURL || "";
   const type = post?.type || "video";
   const isAudioPost = type === "audio";
   const isPhotoPost = type === "photo";
@@ -53,12 +66,56 @@ export function VideoCard({
   const [commentCount, setCommentCount] = useState(
     post?.commentsCount ?? post?.comments ?? 0,
   );
+  const [authorProfile, setAuthorProfile] = useState(null);
+
+  const authorName =
+    authorProfile?.username ||
+    makeHandle(authorProfile?.displayName || authorProfile?.email) ||
+    (!isPlaceholderHandle(post?.username) ? post?.username : "") ||
+    makeHandle(post?.displayName || post?.userId) ||
+    "creator";
+  const authorPhoto =
+    authorProfile?.photoURL ||
+    post?.photoURL ||
+    "https://i.pravatar.cc/150?img=1";
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAuthor() {
+      setAuthorProfile(null);
+
+      if (!post?.userId) {
+        return;
+      }
+
+      const shouldResolve =
+        !post?.username ||
+        isPlaceholderHandle(post.username) ||
+        !post?.photoURL ||
+        !post?.displayName;
+
+      if (!shouldResolve) return;
+
+      const result = await getUserProfile(post.userId);
+
+      if (isMounted && result.success) {
+        setAuthorProfile(result.profile);
+      }
+    }
+
+    loadAuthor();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [post?.displayName, post?.photoURL, post?.userId, post?.username]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadSocialState() {
-      if (!post?.id || post?.isDemo || !user?.uid) {
+      if (!post?.id || !user?.uid) {
         setLiked(false);
         setSaved(false);
         return;
@@ -80,16 +137,9 @@ export function VideoCard({
     return () => {
       isMounted = false;
     };
-  }, [post?.id, post?.isDemo, user?.uid]);
+  }, [post?.id, user?.uid]);
 
   async function handleLike() {
-    if (post?.isDemo) {
-      const nextLiked = !liked;
-      setLiked(nextLiked);
-      setLikeCount((value) => Math.max(value + (nextLiked ? 1 : -1), 0));
-      return;
-    }
-
     if (!user?.uid) {
       Alert.alert("Login dibutuhkan", "Masuk dulu sebelum like post.");
       return;
@@ -111,13 +161,6 @@ export function VideoCard({
   }
 
   async function handleSave() {
-    if (post?.isDemo) {
-      const nextSaved = !saved;
-      setSaved(nextSaved);
-      setSaveCount((value) => Math.max(value + (nextSaved ? 1 : -1), 0));
-      return;
-    }
-
     if (!user?.uid) {
       Alert.alert("Login dibutuhkan", "Masuk dulu sebelum save post.");
       return;
@@ -147,6 +190,10 @@ export function VideoCard({
   }
 
   function renderMedia() {
+    if (!mediaUrl) {
+      return <MissingMedia type={type} />;
+    }
+
     if (isAudioPost) {
       return (
         <AudioSurface
@@ -173,7 +220,7 @@ export function VideoCard({
           <View>
             <Image
               source={{
-                uri: post?.photoURL || "https://i.pravatar.cc/150?img=1",
+                uri: authorPhoto,
               }}
               style={styles.avatar}
             />
@@ -183,11 +230,7 @@ export function VideoCard({
           </View>
 
           <Text style={styles.username}>
-            @
-            {post?.username ||
-              post?.displayName?.toLowerCase().replace(/\s+/g, "_") ||
-              post?.userId?.slice(0, 8) ||
-              "creator"}
+            @{authorName}
           </Text>
         </Pressable>
 
@@ -227,6 +270,20 @@ export function VideoCard({
         postId={post.id}
         visible={showComments}
       />
+    </View>
+  );
+}
+
+function MissingMedia({ type }) {
+  return (
+    <View style={styles.missingMedia}>
+      <Ionicons name="cloud-offline-outline" size={38} color="#FFFFFF" />
+      <Text style={styles.missingTitle}>Media belum tersedia</Text>
+      <Text style={styles.missingText}>
+        {type === "audio"
+          ? "Audio belum punya URL yang bisa diputar."
+          : "File media belum punya URL yang bisa ditampilkan."}
+      </Text>
     </View>
   );
 }
@@ -390,6 +447,26 @@ const styles = StyleSheet.create({
   container: { backgroundColor: "#000" },
   mediaWrapper: { flex: 1 },
   mediaFill: { position: "absolute", width: "100%", height: "100%" },
+  missingMedia: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    backgroundColor: "#111820",
+  },
+  missingTitle: {
+    marginTop: 12,
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  missingText: {
+    marginTop: 8,
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+  },
   audioSurface: {
     flex: 1,
     alignItems: "center",
