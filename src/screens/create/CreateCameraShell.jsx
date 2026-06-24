@@ -51,18 +51,20 @@ export function CreateCameraShell({
         </View>
       ) : null}
 
-      <CreateToolOverlay
-        activeRecording={activeRecording}
-        activeTools={activeTools}
-        filterLabel={selectedFilter.key === noFilter.key ? "" : selectedFilter.label}
-        flashMode={flashMode}
-        formattedRecordTime={formatTime(recordSeconds)}
-        isCountingDown={Boolean(countdown)}
-        onFlipCamera={onFlipCamera}
-        onToolPress={onToolPress}
-        stickerLabel={selectedSticker.key === noSticker.key ? "" : selectedSticker.label}
-        timerSeconds={timerSeconds}
-      />
+      {mode !== "audio" ? (
+        <CreateToolOverlay
+          activeRecording={activeRecording}
+          activeTools={activeTools}
+          filterLabel={selectedFilter.key === noFilter.key ? "" : selectedFilter.label}
+          flashMode={flashMode}
+          formattedRecordTime={formatTime(recordSeconds)}
+          isCountingDown={Boolean(countdown)}
+          onFlipCamera={onFlipCamera}
+          onToolPress={onToolPress}
+          stickerLabel={selectedSticker.key === noSticker.key ? "" : selectedSticker.label}
+          timerSeconds={timerSeconds}
+        />
+      ) : null}
       <CreateModeControls
         activeRecording={activeRecording}
         mode={mode}

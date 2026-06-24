@@ -44,6 +44,20 @@ function normalizePostSnapshot(snapshot) {
   };
 }
 
+function getCreatedTime(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  return Number(value) || 0;
+}
+
+function sortNewestPosts(posts) {
+  return [...posts].sort(
+    (first, second) =>
+      getCreatedTime(second.createdAt) - getCreatedTime(first.createdAt),
+  );
+}
+
 function validatePostPayload(userId, type, mediaURL) {
   if (!normalizeText(userId)) {
     return "User wajib login sebelum membuat post.";
@@ -255,10 +269,11 @@ export async function getUserPosts(userId) {
     const postsQuery = query(
       collection(db, "posts"),
       where("userId", "==", cleanUserId),
-      orderBy("createdAt", "desc"),
     );
     const snapshot = await getDocs(postsQuery);
-    const posts = snapshot.docs.map(normalizePostSnapshot).filter(Boolean);
+    const posts = sortNewestPosts(
+      snapshot.docs.map(normalizePostSnapshot).filter(Boolean),
+    );
 
     return { success: true, posts };
   } catch (error) {

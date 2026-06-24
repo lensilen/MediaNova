@@ -43,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="photo-editor" />
         <Stack.Screen name="capture-preview" />
         <Stack.Screen name="preview" />
+        <Stack.Screen name="media-viewer" />
         <Stack.Screen name="audio-editor" />
         <Stack.Screen name="audio-player" />
         <Stack.Screen name="settings" />

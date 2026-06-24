@@ -15,7 +15,6 @@ import {
   collection,
   doc,
   onSnapshot,
-  orderBy,
   query,
   where,
 } from 'firebase/firestore';
@@ -25,7 +24,7 @@ import { PostGrid } from '../../components/profile/PostGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { db } from '../../utils/firebase';
-import { getUserPosts } from '../../utils/posts';
+import { getPostById, getUserPosts } from '../../utils/posts';
 import {
   getCommentedPosts,
   getFollowers,
@@ -37,10 +36,31 @@ import {
 import { followUser, isFollowing, unfollowUser } from '../../utils/social';
 import { profileStyles as styles } from './profileScreenStyles';
 
-const CONTENT_TABS = ['Video', 'Audio', 'Comment', 'Like', 'Saved'];
+const CONTENT_TABS = ['Media', 'Comment', 'Like', 'Saved'];
 
 function asParamValue(value) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function getCreatedTime(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  return Number(value) || 0;
+}
+
+function sortNewestPosts(items) {
+  return [...items].sort(
+    (first, second) =>
+      getCreatedTime(second.createdAt) - getCreatedTime(first.createdAt),
+  );
+}
+
+function normalizeActivitySnapshot(snapshot) {
+  return snapshot.docs.map((activityDoc) => ({
+    id: activityDoc.id,
+    ...activityDoc.data(),
+  }));
 }
 
 export function ProfileScreen({
@@ -97,39 +117,31 @@ export function ProfileScreen({
     return `@${source.split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '')}`;
   }, [displayName, visibleProfile.email]);
 
-  // Bagian yang diperbarui sesuai permintaanmu
   const visiblePosts = useMemo(() => {
-    if (activeTab === "Video") {
-      return posts.filter(
-        (post) => post.type === "video"
-      );
-    }
-
-    if (activeTab === "Audio") {
-      return posts.filter(
-        (post) => post.type === "audio"
-      );
+    if (activeTab === "Media") {
+      return posts;
     }
 
     if (activeTab === "Comment") {
-      return commentedPosts;
+      return commentedPosts.filter((post) => post.userId !== targetUserId);
     }
 
     if (activeTab === "Saved") {
-      return savedPosts;
+      return savedPosts.filter((post) => post.userId !== targetUserId);
     }
 
     if (activeTab === "Like") {
-      return likedPosts;
+      return likedPosts.filter((post) => post.userId !== targetUserId);
     }
 
-    return posts.filter((post) => post.type === "photo");
+    return posts;
   }, [
     activeTab,
     commentedPosts,
     likedPosts,
     posts,
     savedPosts,
+    targetUserId,
   ]);
 
   const loadProfile = useCallback(
@@ -219,7 +231,6 @@ export function ProfileScreen({
     const postsRef = query(
       collection(db, 'posts'),
       where('userId', '==', targetUserId),
-      orderBy('createdAt', 'desc'),
     );
 
     const stopProfile = onSnapshot(profileRef, (snapshot) => {
@@ -241,7 +252,7 @@ export function ProfileScreen({
         ...postDoc.data(),
       }));
 
-      setPosts(nextPosts);
+      setPosts(sortNewestPosts(nextPosts));
     });
 
     return () => {
@@ -249,6 +260,64 @@ export function ProfileScreen({
       stopPosts();
     };
   }, [isOwnProfile, setProfile, targetUserId]);
+
+  useEffect(() => {
+    if (!targetUserId) {
+      return undefined;
+    }
+
+    let isActive = true;
+
+    async function setPostsFromActivities(snapshot, type, setter) {
+      const activities = normalizeActivitySnapshot(snapshot);
+      const postResults = await Promise.all(
+        activities.map((activity) => getPostById(activity.postId)),
+      );
+
+      if (!isActive) {
+        return;
+      }
+
+      const nextPosts = postResults
+        .map((result, index) => {
+          if (!result.success) {
+            return null;
+          }
+
+          return {
+            ...result.post,
+            activityId: activities[index].id,
+            activityText: activities[index].text || '',
+            activityType: type,
+          };
+        })
+        .filter(Boolean);
+
+      setter(sortNewestPosts(nextPosts));
+    }
+
+    const activityQuery = (collectionName) =>
+      query(collection(db, collectionName), where('userId', '==', targetUserId));
+
+    const stopComments = onSnapshot(activityQuery('comments'), (snapshot) => {
+      setPostsFromActivities(snapshot, 'comments', setCommentedPosts);
+    });
+    const stopLikes = onSnapshot(activityQuery('likes'), (snapshot) => {
+      setPostsFromActivities(snapshot, 'likes', setLikedPosts);
+    });
+    const stopSaves = isOwnProfile
+      ? onSnapshot(activityQuery('saves'), (snapshot) => {
+          setPostsFromActivities(snapshot, 'saves', setSavedPosts);
+        })
+      : () => {};
+
+    return () => {
+      isActive = false;
+      stopComments();
+      stopLikes();
+      stopSaves();
+    };
+  }, [isOwnProfile, targetUserId]);
 
   async function handleFollowToggle() {
     if (!currentUserId || !targetUserId) {
@@ -297,10 +366,20 @@ export function ProfileScreen({
   }
 
   function handlePostPress(post) {
-    Alert.alert(
-      post.type === 'audio' ? 'Audio post' : 'Media post',
-      post.caption || 'Post ini belum punya caption.',
-    );
+    if (!post?.mediaURL) {
+      Alert.alert('Media belum tersedia', 'Post ini belum punya URL media.');
+      return;
+    }
+
+    router.push({
+      pathname: '/media-viewer',
+      params: {
+        caption: post.caption || '',
+        title: post.title || post.caption || 'MediaNova',
+        type: post.type || 'video',
+        uri: post.mediaURL,
+      },
+    });
   }
 
   function handleUserProfilePress(item) {
