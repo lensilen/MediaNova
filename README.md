@@ -99,22 +99,6 @@ Build APK development client:
 npx eas build --profile development --platform android
 ```
 
-## Screenshot Fitur Utama
-
-Letakkan screenshot final di folder `assets/screenshots/`.
-
-Daftar screenshot yang disarankan:
-
-1. `01-login.png` - halaman login/register
-2. `02-feed.png` - feed utama video/foto/audio
-3. `03-create-video.png` - create media / camera
-4. `04-editor.png` - editor media
-5. `05-new-post.png` - preview new post
-6. `06-profile.png` - profile dan tab media
-7. `07-comments.png` - comment sheet
-8. `08-notifications.png` - notification sheet
-9. `09-search.png` - search user/content
-
 ## Dokumentasi
 
 - Technical Documentation: `docs/TECHNICAL_DOCUMENTATION.md`
