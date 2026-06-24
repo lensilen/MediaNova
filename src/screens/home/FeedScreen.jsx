@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -21,14 +21,17 @@ import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import { useFeed } from "../../hooks/useFeed";
 import {
-  getNotifications,
   markNotificationAsRead,
+  sendLocalNotification,
+  subscribeNotifications,
 } from "../../utils/notifications";
 import { subscribeFeedPosts } from "../../utils/posts";
 import { useFeedStore } from "../../store/feedStore";
 
 export default function FeedScreen() {
   const listRef = useRef(null);
+  const hasLoadedNotificationsRef = useRef(false);
+  const lastNotificationIdRef = useRef("");
   const router = useRouter();
   const { height } = useWindowDimensions();
   const { user } = useAuth();
@@ -41,6 +44,7 @@ export default function FeedScreen() {
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
+  const unreadCount = notifications.filter((item) => item.read === false).length;
   const activePostId = feedPosts.some((post) => post.id === activeId)
     ? activeId
     : feedPosts[0]?.id || "";
@@ -97,24 +101,66 @@ export default function FeedScreen() {
     }
 
     setNotificationVisible(true);
-    setNotificationLoading(true);
+    setNotificationLoading(false);
 
-    const result = await getNotifications(user.uid);
+    notifications
+      .filter((item) => item.read === false)
+      .slice(0, 10)
+      .forEach((item) => {
+        markNotificationAsRead(item.id);
+      });
+  }, [notifications, user]);
 
-    if (result.success) {
-      setNotifications(result.notifications);
-      result.notifications
-        .filter((item) => item.read === false)
-        .slice(0, 10)
-        .forEach((item) => {
-          markNotificationAsRead(item.id);
-        });
-    } else {
-      Alert.alert("Notifikasi gagal", result.error);
+  useEffect(() => {
+    if (!user?.uid) {
+      hasLoadedNotificationsRef.current = false;
+      lastNotificationIdRef.current = "";
+      return undefined;
     }
 
-    setNotificationLoading(false);
-  }, [user]);
+    const unsubscribe = subscribeNotifications(
+      user.uid,
+      (result) => {
+        setNotificationLoading(false);
+
+        if (!result.success) {
+          return;
+        }
+
+        const nextNotifications = result.notifications;
+        const newestUnread = nextNotifications.find(
+          (item) => item.read === false,
+        );
+
+        setNotifications(nextNotifications);
+
+        if (!hasLoadedNotificationsRef.current) {
+          hasLoadedNotificationsRef.current = true;
+          lastNotificationIdRef.current = newestUnread?.id || "";
+          return;
+        }
+
+        if (
+          newestUnread?.id &&
+          newestUnread.id !== lastNotificationIdRef.current &&
+          !notificationVisible
+        ) {
+          lastNotificationIdRef.current = newestUnread.id;
+          sendLocalNotification(
+            "Aktivitas baru di MediaNova",
+            getNotificationText(newestUnread),
+            { notificationId: newestUnread.id },
+          );
+        }
+      },
+      (result) => {
+        setNotificationLoading(false);
+        Alert.alert("Notifikasi gagal", result.error);
+      },
+    );
+
+    return unsubscribe;
+  }, [notificationVisible, user?.uid]);
 
   useFocusEffect(
     useCallback(() => {
@@ -159,8 +205,15 @@ export default function FeedScreen() {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Pressable onPress={openNotifications}>
+        <Pressable onPress={openNotifications} style={styles.notificationButton}>
           <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+          {unreadCount > 0 ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Text>
+            </View>
+          ) : null}
         </Pressable>
 
         <Text style={styles.logo}>MediaNova</Text>
@@ -314,6 +367,29 @@ const styles = StyleSheet.create({
   logo: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "900",
+  },
+  notificationButton: {
+    minHeight: 32,
+    minWidth: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationBadge: {
+    position: "absolute",
+    right: -3,
+    top: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    backgroundColor: "#C81E1E",
+  },
+  notificationBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 9,
     fontWeight: "900",
   },
 
