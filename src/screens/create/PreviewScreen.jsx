@@ -32,16 +32,21 @@ export function PreviewScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const { profile, user } = useAuth();
-  const { error, isUploading, progress, uploadAudio, uploadImage, uploadVideo } =
-    useUpload();
+  const {
+    error,
+    isUploading,
+    progress,
+    uploadAudio,
+    uploadImage,
+    uploadVideo,
+  } = useUpload();
   const draftId = readParam(params.draftId);
-  const storedDraft = useCreateDraftStore((state) =>
-    state.drafts[draftId] || state.drafts[state.currentDraftId],
+  const storedDraft = useCreateDraftStore(
+    (state) => state.drafts[draftId] || state.drafts[state.currentDraftId],
   );
   const clearDraft = useCreateDraftStore((state) => state.clearDraft);
   const uri = storedDraft?.uri || readParam(params.uri);
-  const mediaType =
-    storedDraft?.type || readParam(params.mediaType, "video");
+  const mediaType = storedDraft?.type || readParam(params.mediaType, "video");
   const selectedSticker = getStickerByKey(
     storedDraft?.sticker || readParam(params.sticker, "none"),
   );
@@ -50,11 +55,13 @@ export function PreviewScreen() {
   const [location, setLocation] = useState("");
   const [visibility, setVisibility] = useState("Everyone");
   const [allowComments, setAllowComments] = useState(true);
+  const uploadPercent = Math.min(Math.max(progress.percent || 0, 0), 100);
 
   function buildEditMeta() {
     return {
       ...(storedDraft?.editMeta || {}),
-      brightness: storedDraft?.editMeta?.brightness || readParam(params.brightness),
+      brightness:
+        storedDraft?.editMeta?.brightness || readParam(params.brightness),
       contrast: storedDraft?.editMeta?.contrast || readParam(params.contrast),
       filter:
         storedDraft?.editMeta?.filter ||
@@ -118,9 +125,19 @@ export function PreviewScreen() {
       {
         allowComments,
         author: {
-          displayName: profile?.displayName || user.displayName || "",
+          displayName:
+            profile?.displayName ||
+            user.displayName ||
+            user.email?.split("@")[0] ||
+            "",
           email: profile?.email || user.email || "",
           photoURL: profile?.photoURL || user.photoURL || "",
+          username:
+            profile?.username ||
+            profile?.displayName?.toLowerCase().replace(/\s+/g, "_") ||
+            user.displayName?.toLowerCase().replace(/\s+/g, "_") ||
+            user.email?.split("@")[0]?.toLowerCase() ||
+            "",
         },
         editMeta,
         location,
@@ -134,10 +151,14 @@ export function PreviewScreen() {
       return;
     }
 
-    await sendLocalNotification("Post terkirim", "Feed baru berhasil ditambahkan.", {
-      postId: postResult.post.id,
-      type: mediaType,
-    });
+    await sendLocalNotification(
+      "Post terkirim",
+      "Feed baru berhasil ditambahkan.",
+      {
+        postId: postResult.post.id,
+        type: mediaType,
+      },
+    );
 
     clearDraft(storedDraft?.id || draftId);
     router.replace("/(tabs)");
@@ -251,7 +272,11 @@ export function PreviewScreen() {
             />
             <View style={styles.row}>
               <View style={styles.rowLeft}>
-                <Ionicons name="chatbox-outline" size={19} color={colors.primary} />
+                <Ionicons
+                  name="chatbox-outline"
+                  size={19}
+                  color={colors.primary}
+                />
                 <Text style={styles.rowText}>Allow comments</Text>
               </View>
               <Switch
@@ -268,7 +293,7 @@ export function PreviewScreen() {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${Math.max(progress.percent || 0, 4)}%` },
+                  { width: `${Math.max(uploadPercent, 4)}%` },
                 ]}
               />
             </View>
@@ -287,7 +312,7 @@ export function PreviewScreen() {
           >
             <Ionicons name="send" size={16} color={colors.onPrimary} />
             <Text style={styles.primaryText}>
-              {isUploading ? `${progress.percent || 0}%` : "Post"}
+              {isUploading ? `${uploadPercent}%` : "Post"}
             </Text>
           </Pressable>
         </View>
@@ -302,7 +327,9 @@ function PostVideoPreview({ uri }) {
     nextPlayer.loop = true;
   });
 
-  return <VideoView contentFit="cover" player={player} style={styles.mediaImage} />;
+  return (
+    <VideoView contentFit="cover" player={player} style={styles.mediaImage} />
+  );
 }
 
 function PostRow({ icon, onPress, title, value }) {

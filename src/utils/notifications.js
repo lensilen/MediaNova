@@ -197,8 +197,11 @@ export async function getDevicePushToken() {
 export async function saveTokenToFirestore(userId, token) {
   const cleanUserId = normalizeText(userId);
   const tokenValue =
-    typeof token === "string" ? normalizeText(token) : normalizeText(token?.data);
-  const tokenType = typeof token === "string" ? "device" : token?.type || "device";
+    typeof token === "string"
+      ? normalizeText(token)
+      : normalizeText(token?.data);
+  const tokenType =
+    typeof token === "string" ? "device" : token?.type || "device";
 
   if (!cleanUserId) {
     return { success: false, error: "User ID wajib diisi." };
@@ -226,7 +229,12 @@ export async function saveTokenToFirestore(userId, token) {
   }
 }
 
-export async function createNotification(toUserId, fromUserId, type, postId = "") {
+export async function createNotification(
+  toUserId,
+  fromUserId,
+  type,
+  postId = "",
+) {
   const cleanToUserId = normalizeText(toUserId);
   const cleanFromUserId = normalizeText(fromUserId);
   const cleanPostId = normalizeText(postId);
@@ -256,7 +264,10 @@ export async function createNotification(toUserId, fromUserId, type, postId = ""
   }
 
   try {
-    const notificationRef = await addDoc(collection(db, "notifications"), payload);
+    const notificationRef = await addDoc(
+      collection(db, "notifications"),
+      payload,
+    );
 
     return {
       success: true,
@@ -270,7 +281,10 @@ export async function createNotification(toUserId, fromUserId, type, postId = ""
   }
 }
 
-export async function getNotifications(userId, limitValue = DEFAULT_NOTIFICATION_LIMIT) {
+export async function getNotifications(
+  userId,
+  limitValue = DEFAULT_NOTIFICATION_LIMIT,
+) {
   const cleanUserId = normalizeText(userId);
 
   if (!cleanUserId) {
@@ -460,9 +474,10 @@ export async function sendLocalNotification(title, body, data = {}) {
 
 function getNotificationErrorMessage(code) {
   const messages = {
-    "ERR_NOTIFICATIONS_DEVICE_ID": "Device ID notifikasi gagal dibuat.",
-    "ERR_NOTIFICATIONS_PERMISSION_DENIED": "Izin notifikasi ditolak.",
-    "permission-denied": "Akses Firestore ditolak. Cek rules atau status login.",
+    ERR_NOTIFICATIONS_DEVICE_ID: "Device ID notifikasi gagal dibuat.",
+    ERR_NOTIFICATIONS_PERMISSION_DENIED: "Izin notifikasi ditolak.",
+    "permission-denied":
+      "Akses Firestore ditolak. Cek rules atau status login.",
     unavailable: "Firebase sedang tidak tersedia. Coba lagi nanti.",
     unauthenticated: "Kamu harus login terlebih dahulu.",
   };

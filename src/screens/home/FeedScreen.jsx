@@ -10,15 +10,20 @@ import {
   RefreshControl,
   Share,
   Text,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, usePathname, useRouter } from "expo-router";
 
 import { VideoCard } from "../../components/home/VideoCard";
+import { TAB_BAR_HEIGHT } from "../../constants/layout";
 import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import { useFeed } from "../../hooks/useFeed";
-import { getNotifications, markNotificationAsRead } from "../../utils/notifications";
+import {
+  getNotifications,
+  markNotificationAsRead,
+} from "../../utils/notifications";
 import { subscribeFeedPosts } from "../../utils/posts";
 import { useFeedStore } from "../../store/feedStore";
 
@@ -26,35 +31,27 @@ const dummyVideos = [
   {
     id: "1",
     type: "video",
-    username: "student_creator",
+    username: "medianova_demo",
     photoURL: "https://i.pravatar.cc/150?img=1",
-    caption: "Exploring the new library! #campuslife",
-    mediaURL:
-      "https://www.w3schools.com/html/mov_bbb.mp4",
+    caption: "Demo feed MediaNova. Upload post baru untuk melihat konten asli.",
+    mediaURL: "https://www.w3schools.com/html/mov_bbb.mp4",
     likes: 12400,
     comments: 342,
     saves: 89,
     currentTime: "1:04",
     duration: "3:42",
   },
-
 ];
 
 export default function FeedScreen() {
   const listRef = useRef(null);
   const router = useRouter();
+  const { height } = useWindowDimensions();
   const { user } = useAuth();
   const pathname = usePathname();
   const isFocused = pathname === "/";
-  const {
-    posts,
-    hasMore,
-    isLoading,
-    isRefreshing,
-    error,
-    loadFeed,
-    loadMore,
-  } = useFeed({ pageSize: 8 });
+  const { posts, hasMore, isLoading, isRefreshing, error, loadFeed, loadMore } =
+    useFeed({ pageSize: 8 });
   const feedPosts = useMemo(
     () =>
       posts.length
@@ -62,15 +59,14 @@ export default function FeedScreen() {
         : dummyVideos.map((video) => ({ ...video, isDemo: true })),
     [posts],
   );
-  const [activeId, setActiveId] = useState(
-    feedPosts[0]?.id || ""
-  );
+  const [activeId, setActiveId] = useState(feedPosts[0]?.id || "");
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const activePostId = feedPosts.some((post) => post.id === activeId)
     ? activeId
     : feedPosts[0]?.id || "";
+  const feedHeight = Math.max(height - TAB_BAR_HEIGHT, 360);
 
   const handleShare = useCallback(async (post) => {
     const caption = post?.caption || "MediaNova post";
@@ -91,51 +87,29 @@ export default function FeedScreen() {
     }
   }, []);
 
-  const viewabilityConfig = useMemo(() => ({
-    itemVisiblePercentThreshold: 80,
-  }), []);
-
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }) => {
-      if (
-        viewableItems &&
-        viewableItems.length > 0
-      ) {
-        setActiveId(
-          viewableItems[0].item.id
-        );
-      }
-    },
-    []
+  const viewabilityConfig = useMemo(
+    () => ({
+      itemVisiblePercentThreshold: 80,
+    }),
+    [],
   );
+
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+    if (viewableItems && viewableItems.length > 0) {
+      setActiveId(viewableItems[0].item.id);
+    }
+  }, []);
 
   const renderItem = useCallback(
     ({ item }) => (
       <VideoCard
         post={item}
+        feedHeight={feedHeight}
         isActive={isFocused && activePostId === item.id}
-        onProfilePress={() => {
-          console.log(
-            "Profile:",
-            item.username
-          );
-        }}
-        onLike={() => {
-          console.log("Like:", item.id);
-        }}
-        onComment={() => {
-          console.log(
-            "Comment:",
-            item.id
-          );
-        }}
-        onSave={() => {
-          console.log("Save:", item.id);
-        }}
         onShare={handleShare}
       />
     ),
-    [activePostId, handleShare, isFocused]
+    [activePostId, feedHeight, handleShare, isFocused],
   );
 
   const openNotifications = useCallback(async () => {
@@ -198,10 +172,7 @@ export default function FeedScreen() {
   if (isLoading && !feedPosts.length) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator
-          size="large"
-          color={colors.primary}
-        />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -211,23 +182,13 @@ export default function FeedScreen() {
       {/* HEADER */}
       <View style={styles.header}>
         <Pressable onPress={openNotifications}>
-          <Ionicons
-            name="notifications-outline"
-            size={22}
-            color="#FFFFFF"
-          />
+          <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
         </Pressable>
 
-        <Text style={styles.logo}>
-          MediaNova
-        </Text>
+        <Text style={styles.logo}>MediaNova</Text>
 
         <Pressable onPress={() => router.push("/search")}>
-          <Ionicons
-            name="search-outline"
-            size={22}
-            color="#FFFFFF"
-          />
+          <Ionicons name="search-outline" size={22} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -241,9 +202,16 @@ export default function FeedScreen() {
       <FlatList
         ref={listRef}
         data={feedPosts}
+        decelerationRate="fast"
+        getItemLayout={(_, index) => ({
+          index,
+          length: feedHeight,
+          offset: feedHeight * index,
+        })}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        pagingEnabled
+        snapToAlignment="start"
+        snapToInterval={feedHeight}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -256,12 +224,8 @@ export default function FeedScreen() {
           if (hasMore) loadMore();
         }}
         onEndReachedThreshold={0.5}
-        onViewableItemsChanged={
-          onViewableItemsChanged
-        }
-        viewabilityConfig={
-          viewabilityConfig
-        }
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         removeClippedSubviews
         initialNumToRender={2}
         maxToRenderPerBatch={2}
@@ -279,7 +243,9 @@ export default function FeedScreen() {
 }
 
 function getNotificationText(item) {
-  const actor = item?.fromUserId ? `User ${item.fromUserId.slice(0, 6)}` : "Seseorang";
+  const actor = item?.fromUserId
+    ? `User ${item.fromUserId.slice(0, 6)}`
+    : "Seseorang";
 
   switch (item?.type) {
     case "follow":
@@ -319,7 +285,9 @@ function NotificationModal({ isLoading, notifications, onClose, visible }) {
                   size={18}
                   color={colors.primary}
                 />
-                <Text style={styles.notificationText}>{getNotificationText(item)}</Text>
+                <Text style={styles.notificationText}>
+                  {getNotificationText(item)}
+                </Text>
               </View>
             ))
           ) : (
@@ -334,8 +302,7 @@ function NotificationModal({ isLoading, notifications, onClose, visible }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor:
-      colors.background,
+    backgroundColor: colors.background,
   },
 
   header: {
@@ -359,8 +326,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor:
-      colors.background,
+    backgroundColor: colors.background,
   },
   errorPill: {
     left: 24,

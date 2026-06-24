@@ -125,16 +125,20 @@ function notifyCompressionProgress(onProgress, progress) {
     return;
   }
 
-  const normalizedProgress = Math.min(
-    Math.max(normalizeNumber(progress, 0), 0),
-    1,
+  const normalizedProgress = Math.max(
+    0,
+    Math.min(1, normalizeNumber(progress, 0)),
+  );
+  const percent = Math.max(
+    0,
+    Math.min(100, Math.round(normalizedProgress * 100)),
   );
 
   onProgress({
     bytesTransferred: 0,
     totalBytes: 0,
     progress: normalizedProgress,
-    percent: Math.round(normalizedProgress * 100),
+    percent,
     state: "running",
     phase: "compress",
   });

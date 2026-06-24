@@ -36,7 +36,11 @@ function getExtension(uri, fallback = "mp4") {
   const fileName = cleanUri.split("/").pop() || "";
   const extension = fileName.includes(".") ? fileName.split(".").pop() : "";
 
-  return cleanText(extension).toLowerCase().replace(/[^a-z0-9]/g, "") || fallback;
+  return (
+    cleanText(extension)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "") || fallback
+  );
 }
 
 function getMimeType(uri, fallback = "mp4") {
@@ -82,15 +86,19 @@ function createContextValue(metadata = {}) {
 function notifyProgress(onProgress, loaded, total, phase = "upload") {
   if (typeof onProgress !== "function") return;
 
-  const progress = total > 0 ? loaded / total : 0;
+  const safeTotal = Math.max(total || 0, 0);
+  const safeLoaded = Math.max(loaded || 0, 0);
+  const progress = safeTotal > 0 ? safeLoaded / safeTotal : 0;
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const percent = Math.max(0, Math.min(100, Math.round(clampedProgress * 100)));
 
   onProgress({
-    bytesTransferred: loaded,
-    percent: Math.round(progress * 100),
+    bytesTransferred: safeLoaded,
+    percent,
     phase,
-    progress,
+    progress: clampedProgress,
     state: "running",
-    totalBytes: total,
+    totalBytes: safeTotal,
   });
 }
 
@@ -123,7 +131,8 @@ function buildVideoTransforms(metadata = {}) {
   if (brightness) transforms.push(`e_brightness:${brightness}`);
   if (contrast) transforms.push(`e_contrast:${contrast}`);
   if (saturation) transforms.push(`e_saturation:${saturation}`);
-  if (speed !== 1) transforms.push(`e_accelerate:${Math.round((speed - 1) * 100)}`);
+  if (speed !== 1)
+    transforms.push(`e_accelerate:${Math.round((speed - 1) * 100)}`);
   if (volume !== 1) transforms.push(`e_volume:${Math.round(volume * 100)}`);
   if (overlayText) {
     transforms.push(
@@ -158,12 +167,18 @@ export function isCloudinaryConfigured() {
   return Boolean(cleanText(cloudName) && cleanText(uploadPreset));
 }
 
-export function createCloudinaryDeliveryUrl(uploadResult, mediaType, metadata = {}) {
+export function createCloudinaryDeliveryUrl(
+  uploadResult,
+  mediaType,
+  metadata = {},
+) {
   const url = uploadResult?.secure_url || uploadResult?.downloadURL || "";
 
   if (!url) return "";
-  if (mediaType === "video") return addTransformToUrl(url, buildVideoTransforms(metadata));
-  if (mediaType === "photo") return addTransformToUrl(url, buildImageTransforms(metadata));
+  if (mediaType === "video")
+    return addTransformToUrl(url, buildVideoTransforms(metadata));
+  if (mediaType === "photo")
+    return addTransformToUrl(url, buildImageTransforms(metadata));
 
   return url;
 }
@@ -174,11 +189,19 @@ export function createCloudinaryVideoThumbnail(uploadResult) {
   if (!url) return "";
 
   return url
-    .replace("/video/upload/", "/video/upload/c_fill,g_auto,h_720,w_720,so_1,q_auto/")
+    .replace(
+      "/video/upload/",
+      "/video/upload/c_fill,g_auto,h_720,w_720,so_1,q_auto/",
+    )
     .replace(/\.[a-z0-9]+($|\?)/i, ".jpg$1");
 }
 
-export async function uploadToCloudinary(uri, mediaType, onProgress, options = {}) {
+export async function uploadToCloudinary(
+  uri,
+  mediaType,
+  onProgress,
+  options = {},
+) {
   if (!isCloudinaryConfigured()) {
     return { success: false, error: "Cloudinary belum dikonfigurasi." };
   }
@@ -228,7 +251,11 @@ export async function uploadToCloudinary(uri, mediaType, onProgress, options = {
           return;
         }
 
-        const deliveryURL = createCloudinaryDeliveryUrl(response, mediaType, metadata);
+        const deliveryURL = createCloudinaryDeliveryUrl(
+          response,
+          mediaType,
+          metadata,
+        );
         const thumbnailURL =
           mediaType === "video" ? createCloudinaryVideoThumbnail(response) : "";
 
@@ -248,7 +275,10 @@ export async function uploadToCloudinary(uri, mediaType, onProgress, options = {
           url: deliveryURL || response.secure_url,
         });
       } catch {
-        resolve({ success: false, error: "Response Cloudinary tidak terbaca." });
+        resolve({
+          success: false,
+          error: "Response Cloudinary tidak terbaca.",
+        });
       }
     };
 

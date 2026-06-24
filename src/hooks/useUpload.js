@@ -16,6 +16,32 @@ const initialProgress = {
   phase: "upload",
 };
 
+function clampPercent(value) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  return Math.min(Math.max(Math.round(numericValue), 0), 100);
+}
+
+function normalizeProgress(nextProgress = {}) {
+  const progressValue = Number(nextProgress.progress);
+  const safeProgress = Number.isFinite(progressValue)
+    ? Math.min(Math.max(progressValue, 0), 1)
+    : 0;
+  const percent = clampPercent(nextProgress.percent ?? safeProgress * 100);
+
+  return {
+    ...nextProgress,
+    progress: safeProgress,
+    percent: Math.max(Math.min(percent, 100), 0),
+    bytesTransferred: Math.max(nextProgress.bytesTransferred || 0, 0),
+    totalBytes: Math.max(nextProgress.totalBytes || 0, 0),
+  };
+}
+
 export function useUpload() {
   const [progress, setProgress] = useState(initialProgress);
   const [isUploading, setIsUploading] = useState(false);
@@ -27,8 +53,9 @@ export function useUpload() {
     setProgress(initialProgress);
 
     const handleProgress = (nextProgress) => {
-      setProgress(nextProgress);
-      onProgress?.(nextProgress);
+      const safeProgress = normalizeProgress(nextProgress);
+      setProgress(safeProgress);
+      onProgress?.(safeProgress);
     };
 
     const result = await uploadFn(uri, handleProgress, options);
