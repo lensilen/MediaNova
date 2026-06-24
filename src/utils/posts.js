@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   limit as queryLimit,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -256,6 +257,27 @@ export async function getFeedPosts(pageSize = 10, lastDoc = null) {
 
     return { success: false, error: getPostErrorMessage(error.code) };
   }
+}
+
+export function subscribeFeedPosts(pageSize = 10, onChange, onError) {
+  const safeLimit = normalizeLimit(pageSize);
+  const postsQuery = query(
+    collection(db, "posts"),
+    orderBy("createdAt", "desc"),
+    queryLimit(safeLimit),
+  );
+
+  return onSnapshot(
+    postsQuery,
+    async (snapshot) => {
+      const posts = snapshot.docs.map(normalizePostSnapshot).filter(Boolean);
+      await cacheFeedPosts(posts);
+      onChange?.(posts, snapshot.docs[snapshot.docs.length - 1] || null);
+    },
+    (error) => {
+      onError?.(getPostErrorMessage(error.code));
+    },
+  );
 }
 
 export async function getUserPosts(userId) {

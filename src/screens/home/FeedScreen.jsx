@@ -19,6 +19,8 @@ import { colors } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import { useFeed } from "../../hooks/useFeed";
 import { getNotifications, markNotificationAsRead } from "../../utils/notifications";
+import { subscribeFeedPosts } from "../../utils/posts";
+import { useFeedStore } from "../../store/feedStore";
 
 const dummyVideos = [
   {
@@ -164,9 +166,29 @@ export default function FeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadFeed({ refresh: true });
+      const store = useFeedStore.getState();
+      store.setError(null);
+
+      const unsubscribe = subscribeFeedPosts(
+        8,
+        (nextPosts, lastVisibleDoc) => {
+          const nextStore = useFeedStore.getState();
+          nextStore.setPosts(nextPosts);
+          nextStore.setPagination({
+            lastDoc: lastVisibleDoc,
+            hasMore: nextPosts.length >= 8,
+          });
+          nextStore.setLoading(false);
+          nextStore.setRefreshing(false);
+        },
+        (message) => {
+          useFeedStore.getState().setError(message);
+          loadFeed({ refresh: true });
+        },
+      );
 
       return () => {
+        unsubscribe();
         setActiveId(dummyVideos[0]?.id || "");
         listRef.current?.scrollToOffset?.({ animated: false, offset: 0 });
       };
